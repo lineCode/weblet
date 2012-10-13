@@ -1,0 +1,15 @@
+#!/bin/bash
+
+weblet_pid=`pgrep -x weblet-bin`
+bin_path=`cd $(dirname $0); pwd`
+
+if [ -z "$weblet_pid" ]; then
+    if [ ! -d "${bin_path}/weblet-res" ]; then mkdir ${bin_path}/weblet-res; fi
+    tar zxf ${bin_path}/weblet-res.tgz -C ${bin_path}/weblet-res
+    WEBLET_HOME=${bin_path}/weblet-res/html/weblet.html ${bin_path}/weblet-bin&
+    # TODO
+    sleep 1
+    weblet_pid=`pgrep -x weblet-bin`
+fi
+
+kill -USR1 $weblet_pid

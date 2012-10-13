@@ -6,6 +6,7 @@
 #include <webkit/webkit.h>
 
 #include <unistd.h>
+#include <signal.h>
 #include <spawn.h>
 
 extern char **environ;
@@ -21,6 +22,7 @@ JSGlobalContextRef jsNativeContext;
 JSObjectRef        jsNativeObject;
 
 static void destroy_cb(GtkWidget *widget, gpointer data) { mainWindow = NULL; gtk_main_quit(); }
+static void sigusr1(int signal);
 
 static void
 load_status_cb(WebKitWebFrame *frame,
@@ -40,6 +42,10 @@ load_status_cb(WebKitWebFrame *frame,
                             *(JSObjectRef *)data,
                             0, NULL);
         JSStringRelease(name);
+    }
+    else if (webkit_web_frame_get_load_status(frame) == WEBKIT_LOAD_FINISHED)
+    {
+        signal(SIGUSR1, sigusr1);
     }
 }
 
@@ -103,7 +109,7 @@ js_cb_launcher_submit(JSContextRef context,
     int   cmd_str_buf_cur = 0;
     char *cmd_idx_buf[CMD_ARGS_SIZE];
 
-    if (len >= CMD_ARGS_SIZE) return JSValueMakeNull(context);
+    if (len == 0 || len >= CMD_ARGS_SIZE) return JSValueMakeNull(context);
 
     int i;
     for (i = 0; i < len; ++ i)
@@ -130,9 +136,26 @@ js_cb_launcher_submit(JSContextRef context,
     return JSValueMakeNull(context);
 }
 
+static gboolean sendWKEvent(gpointer data)
+{
+    WebKitDOMDocument *dom = webkit_web_view_get_dom_document(webView);
+    WebKitDOMHTMLElement *ele = webkit_dom_document_get_body(dom);
+    if (ele)
+    {
+        WebKitDOMEvent  *event = webkit_dom_document_create_event(dom, "CustomEvent", NULL);
+        webkit_dom_event_init_event(event, "sysWakeup", FALSE, TRUE); // The custom event should be canceled by the handler
+        webkit_dom_node_dispatch_event(WEBKIT_DOM_NODE(ele), event, NULL);
+    }
+    return FALSE;
+}
 
+static void sigusr1(int signal)
+{
+    g_idle_add((GSourceFunc)sendWKEvent, NULL);
+}
+        
 int
-main(int argc, char* argv[]) {    
+main(int argc, char* argv[]) {
     gtk_init(&argc, &argv);
 
     if(!g_thread_supported())
@@ -190,6 +213,9 @@ main(int argc, char* argv[]) {
                         jsNativeObject,
                         0, NULL);
     JSStringRelease(native_object_name);
+
+    mainWindow = GTK_WINDOW(window);
+    webView = web_view;
     
     g_signal_connect(webkit_web_view_get_main_frame(web_view), "notify::load-status",
                      G_CALLBACK(load_status_cb), &jsNativeObject);
@@ -197,27 +223,25 @@ main(int argc, char* argv[]) {
     // Show it and continue running until the window closes
     gtk_widget_grab_focus(GTK_WIDGET(web_view));
 
-    mainWindow = GTK_WINDOW(window);
-    webView = web_view;
-
     // Example of registering JS native call
     register_native_method("SayHello", js_cb_say_hello);
     register_native_method("GetDesktopFocus", js_cb_get_desktop_focus);
     register_native_method("LauncherSubmit", js_cb_launcher_submit);
 
     // Load a default page
+    char *home = getenv("WEBLET_HOME");
     char *cwd = g_get_current_dir();
-    char *path = g_build_filename(cwd, getenv("WEBLET_HOME"), NULL);
+    char *path = home[0] == '/' ? home : g_build_filename(cwd, getenv("WEBLET_HOME"), NULL);
     char *start = g_filename_to_uri(path, NULL, NULL);
 
     webkit_web_view_load_uri(web_view, start);
 
     g_free(cwd);
-    g_free(path);
+    if (path != home) g_free(path);
     g_free(start);
 
     gtk_widget_show_all(GTK_WIDGET(mainWindow));
-
+    
     gtk_main();
     
     return 0;

@@ -1,15 +1,25 @@
 var launcherCurrentArugment;
+var launcherBusy = false;
 
 function LauncherFinish()
 {
-    var children = $("#launcher-container").children(".launcher-argument");
+    if (launcherBusy) return;
+    launcherBusy = true;
+
+    var container = $("#launcher-container");
+    var children = container.children(".launcher-argument");
     var result = [];
     for (var i = 0; i < children.size(); ++ i) {
         var str = $(children[i]).text();
         if (str != "")
             result.push($(children[i]).text());
     }
+
     sys.LauncherSubmit(result.length, result);
+    $("body").fadeOut(function() {
+        children.remove();
+        container.append("<div class='launcher-argument' contenteditable='true'></div>")
+    });
 }
 
 function LauncherMoveTo(last, current)
@@ -43,7 +53,7 @@ function LauncherMoveForward(cycle)
 
     if (current.index() == children.size() - 1) {
         if (cycle) {
-            current = $(children[1]);
+            current = $(children[0]);
         } else if (current.text() == "") {
             LauncherFinish();
             return;
@@ -61,7 +71,7 @@ function LauncherMoveBackward(cycle)
     var last = current;
     var children = container.children();
 
-    if (current.index() <= 1) {
+    if (current.index() <= 0) {
         if (cycle) { 
             current = $(children[children.size() - 1]);
         } else return;
@@ -123,8 +133,12 @@ $(document).ready(function() {
             return LauncherKeyPressedInCurrentArgument(event);
     })
 
-    $("body").addClass("show");
-    
-    $(".launcher-argument[contenteditable=true]").focus();
-    sys.GetDesktopFocus();
+    $("body").bind("sysWakeup", function() { 
+        $("body").fadeIn(function() {
+            sys.GetDesktopFocus();
+            $(".launcher-argument[contenteditable=true]").focus();
+            launcherBusy = false;
+        })
+        return false;
+    });
 });

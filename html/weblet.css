@@ -4,6 +4,7 @@ body {
     font-size: 10pt;
     font-family: consolas, monospace;
     text-align: center;
+    display: none;
 }
 
 #launcher-container {
@@ -17,16 +18,21 @@ body {
     color: white;
 }
 
-.launcher-prompt, .launcher-argument { 
+.launcher-argument { 
     display: inline-block; 
     padding: 2px;
     margin-right: 4px;
     white-space: pre;
-}
-
-.launcher-argument { 
     border-bottom: 2px solid #acf;
 }
+
+#launcher-container:before {
+    display: inline-block; 
+    padding: 2px;
+    margin-right: 4px;
+    white-space: pre;
+    content: "CMD:"
+ }
 
 .launcher-argument[contenteditable=true]
 {
