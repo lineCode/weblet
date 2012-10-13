@@ -1,0 +1,41 @@
+body {
+    padding: 0px;
+    margin: 0px;
+    font-size: 10pt;
+    font-family: consolas, monospace;
+    text-align: center;
+}
+
+#launcher-container {
+    text-align: left;
+    display: block;
+    padding: 4px;
+    padding-right: 0px;
+    white-space: nowrap;
+
+    background: black;
+    color: white;
+}
+
+.launcher-prompt, .launcher-argument { 
+    display: inline-block; 
+    padding: 2px;
+    margin-right: 4px;
+    white-space: pre;
+}
+
+.launcher-argument { 
+    border-bottom: 2px solid #acf;
+}
+
+.launcher-argument[contenteditable=true]
+{
+    border-bottom: 2px solid #f94;
+}
+
+.launcher-argument:empty:before
+{
+    color: #999;
+    content: "EMPTY";
+}
+
