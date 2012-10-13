@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <spawn.h>
+#include <fcntl.h>
 
 extern char **environ;
 
@@ -20,9 +21,12 @@ WebKitWebView *webView = NULL;
 
 JSGlobalContextRef jsNativeContext;
 JSObjectRef        jsNativeObject;
+GIOChannel        *input_channel;
+
+int page_loaded = 0;
 
 static void destroy_cb(GtkWidget *widget, gpointer data) { mainWindow = NULL; gtk_main_quit(); }
-static void sigusr1(int signal);
+static gboolean input_channel_in(GIOChannel *, GIOCondition, gpointer);
 
 static void
 load_status_cb(WebKitWebFrame *frame,
@@ -45,8 +49,30 @@ load_status_cb(WebKitWebFrame *frame,
     }
     else if (webkit_web_frame_get_load_status(frame) == WEBKIT_LOAD_FINISHED)
     {
-        signal(SIGUSR1, sigusr1);
+        /* Load finished */
+        page_loaded = 1;
+        g_io_add_watch(input_channel, G_IO_IN, input_channel_in, NULL);
     }
+}
+
+static gboolean
+navigation_cb(WebKitWebView             *web_view,
+              WebKitWebFrame            *frame,
+              WebKitNetworkRequest      *request,
+              WebKitWebNavigationAction *navigation_action,
+              WebKitWebPolicyDecision   *policy_decision,
+              gpointer                   user_data)
+{
+    if (webkit_web_frame_get_parent(frame) == NULL)
+    {
+        fprintf(stderr, "request to %s\n", webkit_network_request_get_uri(request));
+        if (page_loaded)
+            /* always ignore */
+            webkit_web_policy_decision_ignore(policy_decision);
+        else webkit_web_policy_decision_use(policy_decision);
+        return TRUE;
+    }
+    else return FALSE;
 }
 
 int
@@ -136,30 +162,47 @@ js_cb_launcher_submit(JSContextRef context,
     return JSValueMakeNull(context);
 }
 
-static gboolean sendWKEvent(gpointer data)
+static void sendWKEvent(char *line)
 {
     WebKitDOMDocument *dom = webkit_web_view_get_dom_document(webView);
     WebKitDOMHTMLElement *ele = webkit_dom_document_get_body(dom);
     if (ele)
     {
         WebKitDOMEvent  *event = webkit_dom_document_create_event(dom, "CustomEvent", NULL);
-        webkit_dom_event_init_event(event, "sysWakeup", FALSE, TRUE); // The custom event should be canceled by the handler
+        webkit_dom_event_init_event(event, "sysWakeup", TRUE, TRUE); // The custom event should be canceled by the handler
         webkit_dom_node_dispatch_event(WEBKIT_DOM_NODE(ele), event, NULL);
     }
-    return FALSE;
 }
 
-static void sigusr1(int signal)
+static gboolean
+input_channel_in(GIOChannel *c, GIOCondition cond, gpointer data)
 {
-    g_idle_add((GSourceFunc)sendWKEvent, NULL);
+    gchar *line_buf;
+    gsize  line_len;
+    gsize  line_term;
+    
+    GIOStatus status = g_io_channel_read_line(c, &line_buf, &line_len, &line_term, NULL);
+    
+    if (status == G_IO_STATUS_NORMAL)
+    {
+        sendWKEvent(line_buf);
+        g_free(line_buf);
+    }
+    else if (status == G_IO_STATUS_EOF)
+    {
+        fprintf(stderr, "input closed\n");
+    }
+    
+    return status == G_IO_STATUS_EOF ? FALSE : TRUE;
 }
-        
+    
 int
 main(int argc, char* argv[]) {
     gtk_init(&argc, &argv);
 
     if(!g_thread_supported())
         g_thread_init(NULL);
+
 
     // Create a Window, set visual to RGBA
     GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -219,6 +262,8 @@ main(int argc, char* argv[]) {
     
     g_signal_connect(webkit_web_view_get_main_frame(web_view), "notify::load-status",
                      G_CALLBACK(load_status_cb), &jsNativeObject);
+    g_signal_connect(web_view, "navigation-policy-decision-requested",
+                     G_CALLBACK(navigation_cb), NULL);
     
     // Show it and continue running until the window closes
     gtk_widget_grab_focus(GTK_WIDGET(web_view));
@@ -230,6 +275,7 @@ main(int argc, char* argv[]) {
 
     // Load a default page
     char *home = getenv("WEBLET_HOME");
+    if (home == NULL) home = "";
     char *cwd = g_get_current_dir();
     char *path = home[0] == '/' ? home : g_build_filename(cwd, getenv("WEBLET_HOME"), NULL);
     char *start = g_filename_to_uri(path, NULL, NULL);
@@ -241,7 +287,13 @@ main(int argc, char* argv[]) {
     g_free(start);
 
     gtk_widget_show_all(GTK_WIDGET(mainWindow));
+
+    // Start watching on stdin
+    // Set stdin closed on spawn
     
+    fcntl(0, F_SETFD, FD_CLOEXEC);
+    input_channel = g_io_channel_unix_new(0);
+
     gtk_main();
     
     return 0;
