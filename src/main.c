@@ -6,6 +6,9 @@
 #include <webkit/webkit.h>
 
 #include <unistd.h>
+#include <spawn.h>
+
+extern char **environ;
 
 #include "weblet.h"
 
@@ -63,10 +66,7 @@ js_cb_say_hello(JSContextRef context,
                 const JSValueRef argv[],
                 JSValueRef* exception)
 {
-    /* GtkAllocation area; */
-    /* area.x = area.y = 0; */
-    /* area.width = area.height = 0; */
-    /* gtk_widget_size_allocate(GTK_WIDGET(webView), &area); */
+    fprintf(stderr, "hello\n");
     return JSValueMakeNull(context);
 }
 
@@ -101,7 +101,7 @@ js_cb_launcher_submit(JSContextRef context,
 
     char  cmd_str_buf[CMD_LINE_SIZE];
     int   cmd_str_buf_cur = 0;
-    char *cmd_idx_buf[CMD_ARGS_SIZE + 2];
+    char *cmd_idx_buf[CMD_ARGS_SIZE];
 
     if (len >= CMD_ARGS_SIZE) return JSValueMakeNull(context);
 
@@ -111,20 +111,20 @@ js_cb_launcher_submit(JSContextRef context,
         JSValueRef cur = JSObjectGetPropertyAtIndex(context, arr, i, NULL);
         JSStringRef str = JSValueToStringCopy(context, cur, NULL);
         size_t l = JSStringGetUTF8CString(str, cmd_str_buf + cmd_str_buf_cur, CMD_LINE_SIZE - cmd_str_buf_cur);
-        cmd_idx_buf[i + 2] = cmd_str_buf + cmd_str_buf_cur;
+        cmd_idx_buf[i] = cmd_str_buf + cmd_str_buf_cur;
         cmd_str_buf_cur += l;
         JSStringRelease(str);
         JSValueUnprotect(context, cur);
     }
-    cmd_idx_buf[0] = "/bin/sh";
-    cmd_idx_buf[1] = "-c";
-    cmd_idx_buf[i + 2] = 0;
+    cmd_idx_buf[i] = 0;
 
-    if (fork() == 0)
+    pid_t pid;
+    if (posix_spawnp(&pid, cmd_idx_buf[0], NULL, NULL, cmd_idx_buf, environ)  == 0)
     {
-        execvp(cmd_idx_buf[0], cmd_idx_buf);
-        fprintf(stderr, "execv returns, too bad.\n");
-        exit(-1);
+    }
+    else
+    {
+        fprintf(stderr, "posix spawn failed, too bad.\n");
     }
 
     return JSValueMakeNull(context);
