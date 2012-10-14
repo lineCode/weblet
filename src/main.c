@@ -16,8 +16,8 @@ extern char **environ;
 
 #define NATIVE_OBJECT_NAME "sys"
 
-GtkWindow  *mainWindow = NULL;
-WebKitWebView *webView = NULL;
+GtkWidget     *main_window = NULL;
+WebKitWebView *web_view = NULL;
 
 JSGlobalContextRef jsNativeContext;
 JSObjectRef        jsNativeObject;
@@ -25,7 +25,7 @@ GIOChannel        *input_channel;
 
 int page_loaded = 0;
 
-static void destroy_cb(GtkWidget *widget, gpointer data) { mainWindow = NULL; gtk_main_quit(); }
+static void destroy_cb(GtkWidget *widget, gpointer data) { main_window = NULL; gtk_main_quit(); }
 static gboolean input_channel_in(GIOChannel *, GIOCondition, gpointer);
 
 static void
@@ -110,7 +110,7 @@ js_cb_get_desktop_focus(JSContextRef context,
                         const JSValueRef argv[],
                         JSValueRef* exception)
 {
-    gtk_window_present(mainWindow);
+    gtk_window_present(GTK_WINDOW(main_window));
     return JSValueMakeNull(context);
 }
 
@@ -164,7 +164,7 @@ js_cb_launcher_submit(JSContextRef context,
 
 static void sendWKEvent(char *line)
 {
-    WebKitDOMDocument *dom = webkit_web_view_get_dom_document(webView);
+    WebKitDOMDocument *dom = webkit_web_view_get_dom_document(web_view);
     WebKitDOMHTMLElement *ele = webkit_dom_document_get_body(dom);
     if (ele)
     {
@@ -202,43 +202,39 @@ main(int argc, char* argv[]) {
 
     if(!g_thread_supported())
         g_thread_init(NULL);
-
+    
+    // Set stdin closed on spawn    
+    fcntl(0, F_SETFD, FD_CLOEXEC);
+    input_channel = g_io_channel_unix_new(0);
 
     // Create a Window, set visual to RGBA
-    GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    GdkScreen *screen = gtk_widget_get_screen(window);
+    main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    GdkScreen *screen = gtk_widget_get_screen(main_window);
     GdkVisual *visual = gdk_screen_get_rgba_visual(screen);
 
-    gtk_window_set_type_hint(GTK_WINDOW(window), GDK_WINDOW_TYPE_HINT_DOCK);
-    gtk_widget_set_can_focus(window, TRUE);
-    gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER_ALWAYS);
+    gtk_window_set_type_hint(GTK_WINDOW(main_window), GDK_WINDOW_TYPE_HINT_DOCK);
+    gtk_widget_set_can_focus(GTK_WIDGET(main_window), TRUE);
+    gtk_window_set_decorated(GTK_WINDOW(main_window), FALSE);
+    gtk_window_set_position(GTK_WINDOW(main_window), GTK_WIN_POS_CENTER_ALWAYS);
     
-    if (visual == NULL || !gtk_widget_is_composited(window))
+    if (visual == NULL || !gtk_widget_is_composited(main_window))
     {
         fprintf(stderr, "Your screen does not support alpha window, :(\n");
         visual = gdk_screen_get_system_visual(screen);
     }
 
-    gtk_widget_set_visual(GTK_WIDGET(window), visual);
-    
+    gtk_widget_set_visual(GTK_WIDGET(main_window), visual);
+    /* Set transparent window background */
     GdkRGBA bg = {1,1,1,0};
-    gtk_widget_override_background_color(GTK_WIDGET(window), GTK_STATE_FLAG_NORMAL, &bg);
-    g_signal_connect(window, "destroy", G_CALLBACK(destroy_cb), NULL);
+    gtk_widget_override_background_color(GTK_WIDGET(main_window), GTK_STATE_FLAG_NORMAL, &bg);
+    g_signal_connect(G_OBJECT(main_window), "destroy", G_CALLBACK(destroy_cb), NULL);
 
-    // Create a WebView, set it transparent, add it to the window
-    WebKitWebView *web_view = web_view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+    /* Create a WebView, set it transparent, add it to the window */
+    web_view = WEBKIT_WEB_VIEW(webkit_web_view_new());
     webkit_web_view_set_transparent(web_view, TRUE);
-    /* WebKitWebSettings *web_setting = webkit_web_view_get_settings(web_view); */
-    /* g_object_set(web_setting, */
-    /*              "auto-resize-window", TRUE, */
-    /*              NULL); */
-    
-    /* webkit_web_view_set_settings(web_view, web_setting); */
-    gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(web_view));
+    gtk_container_add(GTK_CONTAINER(main_window), GTK_WIDGET(web_view));
 
-    /* Create the native object with local callback properties */
-    
+    /* Create the native object with local callback properties */    
     JSGlobalContextRef js_global_context =
         webkit_web_frame_get_global_context(webkit_web_view_get_main_frame(web_view));
 
@@ -257,23 +253,20 @@ main(int argc, char* argv[]) {
                         0, NULL);
     JSStringRelease(native_object_name);
 
-    mainWindow = GTK_WINDOW(window);
-    webView = web_view;
-    
     g_signal_connect(webkit_web_view_get_main_frame(web_view), "notify::load-status",
                      G_CALLBACK(load_status_cb), &jsNativeObject);
     g_signal_connect(web_view, "navigation-policy-decision-requested",
                      G_CALLBACK(navigation_cb), NULL);
     
-    // Show it and continue running until the window closes
+    /* Show it and continue running until the window closes */
     gtk_widget_grab_focus(GTK_WIDGET(web_view));
 
-    // Example of registering JS native call
+    /* Example of registering JS native call */
     register_native_method("SayHello", js_cb_say_hello);
     register_native_method("GetDesktopFocus", js_cb_get_desktop_focus);
     register_native_method("LauncherSubmit", js_cb_launcher_submit);
 
-    // Load a default page
+    /* Load home page */
     char *home = getenv("WEBLET_HOME");
     if (home == NULL) home = "";
     char *cwd = g_get_current_dir();
@@ -286,14 +279,7 @@ main(int argc, char* argv[]) {
     if (path != home) g_free(path);
     g_free(start);
 
-    gtk_widget_show_all(GTK_WIDGET(mainWindow));
-
-    // Start watching on stdin
-    // Set stdin closed on spawn
-    
-    fcntl(0, F_SETFD, FD_CLOEXEC);
-    input_channel = g_io_channel_unix_new(0);
-
+    gtk_widget_show_all(GTK_WIDGET(main_window));
     gtk_main();
     
     return 0;
