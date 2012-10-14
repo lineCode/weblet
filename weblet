@@ -3,9 +3,13 @@
 weblet_pid=`pgrep -x weblet-bin`
 bin_path=`cd $(dirname $0); pwd`
 
-if [ ! -d "${bin_path}/weblet-res" ]; then mkdir ${bin_path}/weblet-res; fi
-if [ ! -p "${bin_path}/weblet-pipe" ]; then mknod ${bin_path}/weblet-pipe p; fi
-tar zxf ${bin_path}/weblet-res.tgz -C ${bin_path}/weblet-res
-WEBLET_HOME=${bin_path}/weblet-res/html/weblet.html \
-    ${bin_path}/weblet-bin < ${bin_path}/weblet-pipe
-unlink ${bin_path}/weblet-pipe
+if [ -z "${weblet_pid}" ]; then
+    echo "Start a new instance of weblet-bin"
+    if [ ! -d "${bin_path}/weblet-res" ]; then mkdir ${bin_path}/weblet-res; fi
+    if [ ! -p "${bin_path}/weblet-pipe" ]; then mknod ${bin_path}/weblet-pipe p; fi
+    tar zxf ${bin_path}/weblet-res.tgz -C ${bin_path}/weblet-res
+    WEBLET_HOME=${bin_path}/weblet-res/html/weblet.html \
+        ${bin_path}/weblet-bin < ${bin_path}/weblet-pipe &
+fi
+
+echo > ${bin_path}/weblet-pipe
