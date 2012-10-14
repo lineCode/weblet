@@ -1,6 +1,11 @@
 var launcherCurrentArugment;
 var launcherBusy = false;
 
+function argumentIsCompleted(arg)
+{
+    return true;
+}
+
 function LauncherFinish()
 {
     if (launcherBusy) return;
@@ -115,6 +120,13 @@ function LauncherKeyPressedInCurrentArgument(event)
     } else if (event.which == 9) {
         bypass = false;
         LauncherMoveForward(1);
+    } else if (event.which == 32) {
+        if (argumentIsCompleted(launcherCurrentArugment.text()))
+        {
+            bypass = false;
+            LauncherMoveForward(0);
+        }
+        else bypass = true;
     }
 
     return bypass;
