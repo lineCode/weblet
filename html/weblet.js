@@ -1,9 +1,23 @@
 var launcherCurrentArugment;
+var launcherCurrentArgumentRangeStart;
 var launcherBusy = false;
 
-function argumentIsCompleted(arg)
+function argumentIsCompleted(arg, pos)
 {
-    return true;
+    var c = "";
+
+    for (var i = 0; i < pos && i < arg.length; ++ i)
+    {
+        if (arg.charAt(i) == '"' && c == "")
+            c = '"';
+        else if (arg.charAt(i) == '"' && c == '"')
+            c = ""
+        else if (arg.charAt(i) == "'" && c == "")
+            c = "'";
+        else if (arg.charAt(i) == "'" && c == "'")
+            c = "";
+    }
+    return c == "";
 }
 
 function LauncherFinish()
@@ -121,7 +135,7 @@ function LauncherKeyPressedInCurrentArgument(event)
         bypass = false;
         LauncherMoveForward(1);
     } else if (event.which == 32) {
-        if (argumentIsCompleted(launcherCurrentArugment.text()))
+        if (argumentIsCompleted(launcherCurrentArugment.text(), launcherCurrentArgumentRangeStart))
         {
             bypass = false;
             LauncherMoveForward(0);
@@ -141,6 +155,7 @@ $(document).ready(function() {
         // To fix the wired focus condition
         var f = window.getSelection().anchorNode;
         launcherCurrentArugment = $(f).closest(".launcher-argument[contenteditable=true]");
+        launcherCurrentArgumentRangeStart = window.getSelection().anchorOffset;
         if (launcherCurrentArugment.size() != 0)
             return LauncherKeyPressedInCurrentArgument(event);
     })
