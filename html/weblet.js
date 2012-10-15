@@ -23,7 +23,6 @@ function ArgumentIsCompleted(arg, pos)
 function LauncherDoCompletion()
 {
     var container = $("#launcher-completion-container");
-
     container.children().remove();
     var comp = sys.GetFileNameCompletion(launcherCurrentArgument.text());
     for (var i = 0; i < comp.length; ++ i)
@@ -37,6 +36,9 @@ function LauncherClean()
     var container = $("#launcher-container");
     container.children(".launcher-argument").remove();
     container.append("<div class='launcher-argument' contenteditable='true'></div>");
+
+    var compContainer = $("#launcher-completion-container");
+    compContainer.children().remove();
 }
 
 function LauncherFinish()
