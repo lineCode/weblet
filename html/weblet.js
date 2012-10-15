@@ -2,7 +2,7 @@ var launcherCurrentArugment;
 var launcherCurrentArgumentRangeStart;
 var launcherBusy = false;
 
-function argumentIsCompleted(arg, pos)
+function ArgumentIsCompleted(arg, pos)
 {
     var c = "";
 
@@ -20,6 +20,13 @@ function argumentIsCompleted(arg, pos)
     return c == "";
 }
 
+function LauncherClean()
+{
+    var container = $("#launcher-container");
+    container.children(".launcher-argument").remove();
+    container.append("<div class='launcher-argument' contenteditable='true'></div>");
+}
+
 function LauncherFinish()
 {
     if (launcherBusy) return;
@@ -35,10 +42,7 @@ function LauncherFinish()
     }
 
     sys.LauncherSubmit(result.length, result);
-    $("body").fadeOut(function() {
-        children.remove();
-        container.append("<div class='launcher-argument' contenteditable='true'></div>")
-    });
+    $("body").fadeOut(LauncherClean);
 }
 
 function LauncherMoveTo(last, current)
@@ -74,7 +78,6 @@ function LauncherMoveForward(cycle)
         if (cycle) {
             current = $(children[0]);
         } else if (current.text() == "") {
-            LauncherFinish();
             return;
         } else container.append(current = $("<div class='launcher-argument'></div>"));
     }
@@ -107,13 +110,12 @@ function LauncherKeyPressedInCurrentArgument(event)
         (window.getSelection().anchorNode);
         if (event.ctrlKey) {
             bypass = false;
-            // Finish input and send
-            LauncherFinish();
+            // TODO behavior
         } else if (!event.shiftKey) {
             // As you see you can still input \n by shift+enter
             bypass = false;
-            // Switch to next block
-            LauncherMoveForward(0);
+            // Finish input and send
+            LauncherFinish();
         }
     } else if (event.which == 37) {
         if (event.ctrlKey && event.altKey) {
@@ -135,7 +137,7 @@ function LauncherKeyPressedInCurrentArgument(event)
         bypass = false;
         LauncherMoveForward(1);
     } else if (event.which == 32) {
-        if (argumentIsCompleted(launcherCurrentArugment.text(), launcherCurrentArgumentRangeStart))
+        if (ArgumentIsCompleted(launcherCurrentArugment.text(), launcherCurrentArgumentRangeStart))
         {
             bypass = false;
             LauncherMoveForward(0);
@@ -152,12 +154,21 @@ $(document).ready(function() {
     });
 
     $(document).bind("keydown", function(event) {
+        if (event.which == 27)
+        {
+            // ESC
+            launcherBusy = true;
+            $("body").fadeOut(LauncherClean);
+            return false;
+        }
         // To fix the wired focus condition
         var f = window.getSelection().anchorNode;
         launcherCurrentArugment = $(f).closest(".launcher-argument[contenteditable=true]");
-        launcherCurrentArgumentRangeStart = window.getSelection().anchorOffset;
         if (launcherCurrentArugment.size() != 0)
+        {
+            launcherCurrentArgumentRangeStart = window.getSelection().anchorOffset;
             return LauncherKeyPressedInCurrentArgument(event);
+        }
     })
 
     $("body").bind("sysWakeup", function() { 
