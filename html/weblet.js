@@ -1,4 +1,4 @@
-var launcherCurrentArugment;
+var launcherCurrentArgument;
 var launcherCurrentArgumentRangeStart;
 var launcherBusy = false;
 
@@ -18,6 +18,18 @@ function ArgumentIsCompleted(arg, pos)
             c = "";
     }
     return c == "";
+}
+
+function LauncherDoCompletion()
+{
+    var container = $("#launcher-completion-container");
+
+    container.children().remove();
+    var comp = sys.GetFileNameCompletion(launcherCurrentArgument.text());
+    for (var i = 0; i < comp.length; ++ i)
+    {
+        container.append("<div class='launcher-completion'>" + comp[i] + "</div>");
+    }
 }
 
 function LauncherClean()
@@ -42,7 +54,8 @@ function LauncherFinish()
     }
 
     sys.LauncherSubmit(result.length, result);
-    $("body").fadeOut(LauncherClean);
+    sys.Hide();
+    LauncherClean();
 }
 
 function LauncherMoveTo(last, current)
@@ -70,7 +83,7 @@ function LauncherMoveTo(last, current)
 function LauncherMoveForward(cycle)
 {
     var container = $("#launcher-container");
-    var current = launcherCurrentArugment;
+    var current = launcherCurrentArgument;
     var last = current;
     var children = container.children();
 
@@ -89,7 +102,7 @@ function LauncherMoveForward(cycle)
 function LauncherMoveBackward(cycle)
 {
     var container = $("#launcher-container");
-    var current = launcherCurrentArugment;
+    var current = launcherCurrentArgument;
     var last = current;
     var children = container.children();
 
@@ -107,6 +120,7 @@ function LauncherKeyPressedInCurrentArgument(event)
     var bypass = true;
     // Process special key here
     if (event.which == 13) {
+        // enter
         (window.getSelection().anchorNode);
         if (event.ctrlKey) {
             bypass = false;
@@ -118,26 +132,31 @@ function LauncherKeyPressedInCurrentArgument(event)
             LauncherFinish();
         }
     } else if (event.which == 37) {
+        // left
         if (event.ctrlKey && event.altKey) {
             bypass = false;
             LauncherMoveBackward(1);
         }
     } else if (event.which == 39) {
+        // right
         if (event.ctrlKey && event.altKey) {
             bypass = false;
             LauncherMoveForward(1);
         }
     } else if (event.which == 8) {
+        // backspace
         if ($(".launcher-argument[contenteditable=true]").text() == "")
         {
             bypass = false;
             LauncherMoveBackward(0);
         }
     } else if (event.which == 9) {
+        // tab
         bypass = false;
-        LauncherMoveForward(1);
+        LauncherDoCompletion();
     } else if (event.which == 32) {
-        if (ArgumentIsCompleted(launcherCurrentArugment.text(), launcherCurrentArgumentRangeStart))
+        // space
+        if (ArgumentIsCompleted(launcherCurrentArgument.text(), launcherCurrentArgumentRangeStart))
         {
             bypass = false;
             LauncherMoveForward(0);
@@ -158,13 +177,14 @@ $(document).ready(function() {
         {
             // ESC
             launcherBusy = true;
-            $("body").fadeOut(LauncherClean);
+            sys.Hide();
+            LauncherClean();
             return false;
         }
         // To fix the wired focus condition
         var f = window.getSelection().anchorNode;
-        launcherCurrentArugment = $(f).closest(".launcher-argument[contenteditable=true]");
-        if (launcherCurrentArugment.size() != 0)
+        launcherCurrentArgument = $(f).closest(".launcher-argument[contenteditable=true]");
+        if (launcherCurrentArgument.size() != 0)
         {
             launcherCurrentArgumentRangeStart = window.getSelection().anchorOffset;
             return LauncherKeyPressedInCurrentArgument(event);
@@ -172,11 +192,10 @@ $(document).ready(function() {
     })
 
     $("body").bind("sysWakeup", function() { 
-        $("body").fadeIn(function() {
-            sys.GetDesktopFocus();
-            $(".launcher-argument[contenteditable=true]").focus();
-            launcherBusy = false;
-        })
+        sys.Show();
+        sys.GetDesktopFocus();
+        $(".launcher-argument[contenteditable=true]").focus();
+        launcherBusy = false;
         return false;
     });
 });
