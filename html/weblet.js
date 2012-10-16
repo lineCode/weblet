@@ -56,7 +56,7 @@ function LauncherFinish()
     }
 
     sys.LauncherSubmit(result.length, result);
-    sys.Hide();
+    sys.HideAndReset();
     LauncherClean();
 }
 
@@ -179,7 +179,7 @@ $(document).ready(function() {
         {
             // ESC
             launcherBusy = true;
-            sys.Hide();
+            sys.HideAndReset();
             LauncherClean();
             return false;
         }

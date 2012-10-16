@@ -108,7 +108,7 @@ js_cb_say_hello(JSContextRef context,
 }
 
 static JSValueRef
-js_cb_hide(JSContextRef context,
+js_cb_hide_and_reset(JSContextRef context,
            JSObjectRef function,
            JSObjectRef self,
            size_t argc,
@@ -116,6 +116,11 @@ js_cb_hide(JSContextRef context,
            JSValueRef* exception)
 {
     gtk_widget_hide(GTK_WIDGET(main_window));
+    // Reset to minimize the size of window
+    GtkAllocation alloc;
+    alloc.x = alloc.y = 0;
+    alloc.height = alloc.width = 0;
+    gtk_widget_size_allocate(GTK_WIDGET(main_window), &alloc);
     return JSValueMakeNull(context);
 }
 
@@ -180,9 +185,8 @@ js_cb_launcher_submit(JSContextRef context,
     cmd_idx_buf[i] = 0;
 
     pid_t pid;
-    if (posix_spawnp(&pid, cmd_idx_buf[0], NULL, NULL, cmd_idx_buf, environ)  == 0)
-    {
-    }
+    if (posix_spawnp(&pid, cmd_idx_buf[0], NULL, NULL, cmd_idx_buf, environ) == 0)
+    { }
     else
     {
         fprintf(stderr, "posix spawn failed, too bad.\n");
@@ -314,7 +318,7 @@ main(int argc, char* argv[]) {
     register_native_method("GetDesktopFocus", js_cb_get_desktop_focus);
     register_native_method("LauncherSubmit", js_cb_launcher_submit);
     register_native_method("GetFileNameCompletion", js_cb_get_file_name_completion);
-    register_native_method("Hide", js_cb_hide);
+    register_native_method("HideAndReset", js_cb_hide_and_reset);
     register_native_method("Show", js_cb_show);
     
     /* Load home page */
