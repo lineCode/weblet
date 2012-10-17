@@ -3,7 +3,7 @@ body {
     margin: 0px;
     font-size: 10pt;
     font-family: consolas, monospace;
-    text-align: center;
+    text-align: left;
 }
 
 #launcher-container {
@@ -45,19 +45,19 @@ body {
 }
 
 #launcher-completion-container {
-    background: #444;
-    color: white;
+    display: inline-block;
     text-align: left;
-    max-height: 300px;
-    overflow-y: hidden;
+    max-height: 160px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .launcher-completion {
     display: inline-block;
     padding: 2px;
-    background: black;
+    background: #aaa;
+    color: black;
     margin: 2px;
-    color: white;
     border-radius: 3px;
     white-space: pre;
 }
