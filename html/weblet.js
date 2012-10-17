@@ -24,7 +24,10 @@ function LauncherDoCompletion()
 {
     var container = $("#launcher-completion-container");
     container.empty();
-    var comp = sys.CompleteFileName(launcherCurrentArgument.text());
+    var comp;
+    if (launcherCurrentArgument.index() == 0)
+        comp = sys.CompleteProg(launcherCurrentArgument.text());
+    else comp = sys.CompleteFileName(launcherCurrentArgument.text());
     if (comp != null)
     {
         var dcomp = "";
