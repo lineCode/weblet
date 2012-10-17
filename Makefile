@@ -1,28 +1,12 @@
-.PHONY: all 
+.PHONY: all
 
-T_CC_OPT_FLAGS	?= -O2
-T_CXX_FLAGS		?= ${T_FLAGS_OPT} $(shell pkg-config --cflags webkitgtk-3.0)
-T_CC_FLAGS		?= ${T_FLAGS_OPT} $(shell pkg-config --cflags webkitgtk-3.0)
+RESFILES := $(shell find html)
 
-SRCFILES:= $(shell find src '(' '!' -regex '.*/_.*' ')' -and '(' -iname "*.cpp" ')' | sed -e 's!^\./!!g')
-RESFILES:= $(shell find html)
+all: ${T_OBJ}/weblet
 
-include ${T_BASE}/utl/template.mk
-
--include ${DEPFILES}
-
-all: ${T_OBJ}/${PRJ}
-
-${T_OBJ}/${PRJ}-bin: ${OBJFILES}
-	@echo LD $@
-	${V}${CXX} ${OBJFILES} $(shell pkg-config --libs webkitgtk-3.0) -o $@
-
-${T_OBJ}/${PRJ}-res.tgz: ${RESFILES}
-	@echo tar zcf $@
-	-${V}rm $@ 2>/dev/null
-	${V}tar zcf $@ html/
-
-${T_OBJ}/${PRJ}: ${T_OBJ}/${PRJ}-bin ${PRJ} ${T_OBJ}/${PRJ}-res.tgz
-	@echo cp $@
-	${V}cp ${PRJ} $@
+${T_OBJ}/weblet: weblet ${RESFILES}
+	@echo Generate weblet package
+	${V}cp weblet $@
 	${V}chmod +x $@
+	${V}mkdir -p ${T_OBJ}/weblet-local
+	${V}cp -r html ${T_OBJ}/weblet-local

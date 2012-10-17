@@ -24,10 +24,13 @@ function LauncherDoCompletion()
 {
     var container = $("#launcher-completion-container");
     container.children().remove();
-    var comp = sys.GetFileNameCompletion(launcherCurrentArgument.text());
-    for (var i = 0; i < comp.length; ++ i)
+    var comp = sys.CompleteFileName(launcherCurrentArgument.text());
+    if (comp != null)
     {
-        container.append("<div class='launcher-completion'>" + comp[i] + "</div>");
+        for (var i = 0; i < comp.length; ++ i)
+        {
+            container.append("<div class='launcher-completion'>" + comp[i] + "</div>");
+        }
     }
 }
 
@@ -170,6 +173,16 @@ function LauncherKeyPressedInCurrentArgument(event)
 }
 
 $(document).ready(function() {
+    if (!sys.LoadPlugin("launcher", "weblet-plugin-launcher.so"))
+    {
+        sys.Error("Cannot load the launcher plugin");
+    }
+
+    if (!sys.LoadPlugin("completion", "weblet-plugin-completion.so"))
+    {
+        sys.Error("Cannot load the completion plugin");
+    }
+
     $("body").click(function() {
         sys.GetDesktopFocus();
     });

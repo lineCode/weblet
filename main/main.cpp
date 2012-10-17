@@ -8,18 +8,25 @@
 
 #include <unistd.h>
 #include <signal.h>
-#include <spawn.h>
 #include <fcntl.h>
+#include <dlfcn.h>
 
 #include <sstream>
+#include <map>
+#include <string>
+
+#include "plugin.h"
 
 using namespace std;
 
 extern char **environ;
 
-#include "weblet.h"
-
 #define NATIVE_OBJECT_NAME "sys"
+
+static char *alloc_cstring_from_jsstring(JSStringRef js_str);
+static void destroy_cb(GtkWidget *widget, gpointer data);
+static gboolean input_channel_in(GIOChannel *, GIOCondition, gpointer);
+static int register_native_method(const char *method_name, weblet_js_callback_f func);
 
 GtkWidget     *main_window = NULL;
 WebKitWebView *web_view = NULL;
@@ -30,8 +37,71 @@ GIOChannel        *input_channel;
 
 int page_loaded = 0;
 
+weblet_host_interface_s host_interface = { register_native_method };
+map<string, void *> plugin_handle_map;
+map<string, weblet_plugin_interface_t> plugin_interface_map;
+
+static char *
+alloc_cstring_from_jsstring(JSStringRef js_str)
+{
+    size_t size = JSStringGetMaximumUTF8CStringSize(js_str);
+    char *buf = (char *)malloc(size);
+    if (buf)
+        JSStringGetUTF8CString(js_str, buf, size);
+    return buf;
+}
+
+static int
+load_plugin(const char *plugin_name, const char *plugin_file_name)
+{
+    weblet_plugin_init_f _init_f;
+    weblet_plugin_interface_t interface;
+    void *handle;
+
+    fprintf(stderr, "Load plugin so file: %s\n", plugin_file_name);
+
+    if (plugin_handle_map.find(plugin_name) != plugin_handle_map.end())
+    {
+        fprintf(stderr, "Failed, already loaded\n");
+        goto failed;
+    }
+        
+    dlerror();
+    handle = dlopen(plugin_file_name, RTLD_LAZY);
+    if (handle == NULL)
+    {
+        fprintf(stderr, "Failed, %s\n", dlerror());
+        goto failed;
+    }
+
+    _init_f = (weblet_plugin_init_f)dlsym(handle, "init");
+    if (_init_f == NULL)
+    {
+        fprintf(stderr, "Failed, cannot find init func\n");
+        dlclose(handle);
+        goto failed;
+    }
+
+    interface = _init_f(&host_interface);
+    if (interface == NULL)
+    {
+        fprintf(stderr, "Failed, returned NULL interface\n");
+        dlclose(handle);
+        goto failed;
+    }
+        
+    plugin_handle_map[plugin_name] = handle;
+    plugin_interface_map[plugin_name] = interface;
+
+    fprintf(stderr, "Successed\n");
+
+    return 0;
+
+  failed:
+    return -1;
+}
+
 static void destroy_cb(GtkWidget *widget, gpointer data) { main_window = NULL; gtk_main_quit(); }
-static gboolean input_channel_in(GIOChannel *, GIOCondition, gpointer);
 
 static void
 load_status_cb(WebKitWebFrame *frame,
@@ -80,7 +150,7 @@ navigation_cb(WebKitWebView             *web_view,
     else return FALSE;
 }
 
-int
+static int
 register_native_method(const char *method_name, weblet_js_callback_f func)
 {
     JSStringRef name = JSStringCreateWithUTF8CString(method_name);
@@ -96,15 +166,56 @@ register_native_method(const char *method_name, weblet_js_callback_f func)
 
 
 static JSValueRef
-js_cb_say_hello(JSContextRef context,
-                JSObjectRef function,
-                JSObjectRef self,
-                size_t argc,
-                const JSValueRef argv[],
-                JSValueRef* exception)
+js_cb_debug_print(JSContextRef context,
+                  JSObjectRef function,
+                  JSObjectRef self,
+                  size_t argc,
+                  const JSValueRef argv[],
+                  JSValueRef* exception)
 {
-    fprintf(stderr, "hello\n");
+    if (argc == 1 && JSValueIsString(context, argv[0]))
+    {
+        JSStringRef string = JSValueToStringCopy(context, argv[0], NULL);
+        
+        static const int MSG_BUF_SIZE = 4096;
+        char msg_buf[MSG_BUF_SIZE];
+        
+        JSStringGetUTF8CString(string, msg_buf, MSG_BUF_SIZE);
+        fprintf(stderr, "[DEBUG]:%s\n", msg_buf);
+        
+        JSStringRelease(string);
+    }
     return JSValueMakeNull(context);
+}
+
+// (plugin_name, plugin_file_name)
+static JSValueRef
+js_cb_load_plugin(JSContextRef context,
+                  JSObjectRef function,
+                  JSObjectRef self,
+                  size_t argc,
+                  const JSValueRef argv[],
+                  JSValueRef* exception)
+{
+    if (argc == 2 && JSValueIsString(context, argv[0]) && JSValueIsString(context, argv[1]))
+    {
+        JSStringRef string;
+        string = JSValueToStringCopy(context, argv[0], NULL);
+        char *plugin_name = alloc_cstring_from_jsstring(string);
+        JSStringRelease(string);
+
+        string = JSValueToStringCopy(context, argv[1], NULL);
+        char *plugin_file_name = alloc_cstring_from_jsstring(string);
+        JSStringRelease(string);
+        
+        // Try to load the plugin
+        bool r = load_plugin(plugin_name, plugin_file_name) == 0;
+
+        free(plugin_name);
+        free(plugin_file_name);
+        return JSValueMakeBoolean(context, r);
+    }
+    return JSValueMakeBoolean(context, false);
 }
 
 static JSValueRef
@@ -115,12 +226,12 @@ js_cb_hide_and_reset(JSContextRef context,
            const JSValueRef argv[],
            JSValueRef* exception)
 {
-    gtk_widget_hide(GTK_WIDGET(main_window));
     // Reset to minimize the size of window
     GtkAllocation alloc;
     alloc.x = alloc.y = 0;
     alloc.height = alloc.width = 0;
     gtk_widget_size_allocate(GTK_WIDGET(main_window), &alloc);
+    gtk_widget_hide(GTK_WIDGET(main_window));
     return JSValueMakeNull(context);
 }
 
@@ -146,72 +257,6 @@ js_cb_get_desktop_focus(JSContextRef context,
 {
     gtk_window_present(GTK_WINDOW(main_window));
     return JSValueMakeNull(context);
-}
-
-#define CMD_LINE_SIZE  1024
-#define CMD_ARGS_SIZE 256
-
-static JSValueRef
-js_cb_launcher_submit(JSContextRef context,
-                      JSObjectRef function,
-                      JSObjectRef self,
-                      size_t argc,
-                      const JSValueRef argv[],
-                      JSValueRef* exception)
-{
-    if (argc != 2)
-        return JSValueMakeNull(context);
-
-    int len = JSValueToNumber(context, argv[0], NULL);
-    JSObjectRef arr = JSValueToObject(context, argv[1], NULL);
-
-    char  cmd_str_buf[CMD_LINE_SIZE];
-    int   cmd_str_buf_cur = 0;
-    char *cmd_idx_buf[CMD_ARGS_SIZE];
-
-    if (len == 0 || len >= CMD_ARGS_SIZE) return JSValueMakeNull(context);
-
-    int i;
-    for (i = 0; i < len; ++ i)
-    {
-        JSValueRef cur = JSObjectGetPropertyAtIndex(context, arr, i, NULL);
-        JSStringRef str = JSValueToStringCopy(context, cur, NULL);
-        size_t l = JSStringGetUTF8CString(str, cmd_str_buf + cmd_str_buf_cur, CMD_LINE_SIZE - cmd_str_buf_cur);
-        cmd_idx_buf[i] = cmd_str_buf + cmd_str_buf_cur;
-        cmd_str_buf_cur += l;
-        JSStringRelease(str);
-        JSValueUnprotect(context, cur);
-    }
-    cmd_idx_buf[i] = 0;
-
-    pid_t pid;
-    if (posix_spawnp(&pid, cmd_idx_buf[0], NULL, NULL, cmd_idx_buf, environ) == 0)
-    { }
-    else
-    {
-        fprintf(stderr, "posix spawn failed, too bad.\n");
-    }
-
-    return JSValueMakeNull(context);
-}
-
-static JSValueRef
-js_cb_get_file_name_completion(JSContextRef context,
-                               JSObjectRef function,
-                               JSObjectRef self,
-                               size_t argc,
-                               const JSValueRef argv[],
-                               JSValueRef* exception)
-{
-    ostringstream out;
-    // XXX
-    out << "[\"comp-1\", \"comp-2\"]";
-    
-    JSStringRef str = JSStringCreateWithUTF8CString(out.str().c_str());
-    JSValueRef result = JSValueMakeFromJSONString(context, str);
-    JSStringRelease(str);
-
-    return result;
 }
 
 static void sendWKEvent(char *line)
@@ -313,17 +358,16 @@ main(int argc, char* argv[]) {
     /* Show it and continue running until the window closes */
     gtk_widget_grab_focus(GTK_WIDGET(web_view));
 
-    /* Example of registering JS native call */
-    register_native_method("SayHello", js_cb_say_hello);
+    register_native_method("DebugPrint", js_cb_debug_print);
     register_native_method("GetDesktopFocus", js_cb_get_desktop_focus);
-    register_native_method("LauncherSubmit", js_cb_launcher_submit);
-    register_native_method("GetFileNameCompletion", js_cb_get_file_name_completion);
     register_native_method("HideAndReset", js_cb_hide_and_reset);
     register_native_method("Show", js_cb_show);
-    
+    register_native_method("LoadPlugin", js_cb_load_plugin);
+
     /* Load home page */
+    char __empty[] = "";
     char *home = getenv("WEBLET_HOME");
-    if (home == NULL) home = "";
+    if (home == NULL) home = __empty;
     char *cwd = g_get_current_dir();
     char *path = home[0] == '/' ? home : g_build_filename(cwd, getenv("WEBLET_HOME"), NULL);
     char *start = g_filename_to_uri(path, NULL, NULL);
