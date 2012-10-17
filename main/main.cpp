@@ -125,8 +125,11 @@ load_status_cb(WebKitWebFrame *frame,
     else if (webkit_web_frame_get_load_status(frame) == WEBKIT_LOAD_FINISHED)
     {
         /* Load finished */
-        page_loaded = 1;
-        g_io_add_watch(input_channel, G_IO_IN, input_channel_in, NULL);
+        if (page_loaded == 0)
+        {
+            page_loaded = 1;
+            g_io_add_watch(input_channel, G_IO_IN, input_channel_in, NULL);
+        }
     }
 }
 
@@ -278,7 +281,7 @@ static void sendWKEvent(char *line)
     if (ele)
     {
         WebKitDOMEvent  *event = webkit_dom_document_create_event(dom, "CustomEvent", NULL);
-        webkit_dom_event_init_event(event, "sysWakeup", TRUE, TRUE); // The custom event should be canceled by the handler
+        webkit_dom_event_init_event(event, "sysWakeup", FALSE, TRUE); // The custom event should be canceled by the handler
         webkit_dom_node_dispatch_event(WEBKIT_DOM_NODE(ele), event, NULL);
     }
 }
@@ -289,7 +292,7 @@ input_channel_in(GIOChannel *c, GIOCondition cond, gpointer data)
     gchar *line_buf;
     gsize  line_len;
     gsize  line_term;
-    
+
     GIOStatus status = g_io_channel_read_line(c, &line_buf, &line_len, &line_term, NULL);
     
     if (status == G_IO_STATUS_NORMAL)

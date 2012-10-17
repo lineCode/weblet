@@ -101,6 +101,7 @@ complete_file_name(char ***result_ptr, char **path_prefix, const char *input_pat
     else free(path);
 
     free(basename);
+    closedir(dir);
     return count;
 
   failed:
@@ -138,6 +139,7 @@ js_cb_complete_file_name(JSContextRef context,
 
         char **comp, *path_prefix;
         csize = complete_file_name(&comp, &path_prefix, path, psize);
+        free(path);
 
         if (csize == 0)
             return JSValueMakeNull(context);
@@ -151,13 +153,17 @@ js_cb_complete_file_name(JSContextRef context,
             asprintf(&full, "%s%s", path_prefix, comp[i]);
             JSStringRef str = JSStringCreateWithUTF8CString(full);
             arr[i] = JSValueMakeString(context, str);
-
+            JSStringRelease(str);
             free(full);
             free(comp[i]);
         }
 
         JSObjectRef obj = JSObjectMakeArray(context, csize, arr, NULL);
-        
+
+        for (i = 0; i < csize; ++ i)
+            JSValueUnprotect(context, arr[i]);
+
+        free(comp);
         free(arr);
         free(path_prefix);
 

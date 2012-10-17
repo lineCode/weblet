@@ -23,7 +23,7 @@ function ArgumentIsCompleted(arg, pos)
 function LauncherDoCompletion()
 {
     var container = $("#launcher-completion-container");
-    container.children().remove();
+    container.empty();
     var comp = sys.CompleteFileName(launcherCurrentArgument.text());
     if (comp != null)
     {
@@ -67,11 +67,11 @@ function LauncherDoCompletion()
 function LauncherClean()
 {
     var container = $("#launcher-container");
-    container.children(".launcher-argument").remove();
+    container.empty();
     container.append("<div class='launcher-argument' contenteditable='true'></div>");
 
     var compContainer = $("#launcher-completion-container");
-    compContainer.children().remove();
+    compContainer.empty();
 }
 
 function LauncherFinish()
@@ -236,9 +236,12 @@ $(document).ready(function() {
             launcherCurrentArgumentRangeStart = window.getSelection().anchorOffset;
             return LauncherKeyPressedInCurrentArgument(event);
         }
+
+        return true;
     })
 
     $("body").bind("sysWakeup", function() { 
+        sys.DebugPrint("sysWakeup");
         sys.Show();
         sys.GetDesktopFocus();
         $(".launcher-argument[contenteditable=true]").focus();

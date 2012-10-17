@@ -7,7 +7,5 @@ if [ -z "${weblet_pid}" ]; then
     echo "Start a new instance of weblet-main"
     if [ ! -p "/tmp/weblet-pipe" ]; then mknod /tmp/weblet-pipe p; fi
     WEBLET_HOME=${local_path}/weblet-local/html/weblet.html LD_LIBRARY_PATH=${local_path}/weblet-local/ \
-        ${local_path}/weblet-local/weblet-main < /tmp/weblet-pipe &
+        socat UNIX-LISTEN:/tmp/weblet-socket EXEC:${local_path}/weblet-local/weblet-main 
 fi
-
-echo > /tmp/weblet-pipe
