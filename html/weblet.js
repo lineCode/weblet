@@ -65,6 +65,8 @@ function LauncherDoCompletion()
             range.select();
         }
     }
+
+    container.addClass("show");
 }
 
 function LauncherClean()
@@ -72,9 +74,12 @@ function LauncherClean()
     var container = $("#launcher-container");
     container.empty();
     container.append("<div class='launcher-argument' contenteditable='true'></div>");
+}
 
+function LauncherCompletionClean()
+{
     var compContainer = $("#launcher-completion-container");
-    compContainer.empty();
+    compContainer.empty().removeClass("show");
 }
 
 function LauncherFinish()
@@ -94,6 +99,7 @@ function LauncherFinish()
     sys.LauncherSubmit(result.length, result);
     sys.HideAndReset();
     LauncherClean();
+    LauncherCompletionClean();
 }
 
 function LauncherMoveTo(last, current)
@@ -103,7 +109,7 @@ function LauncherMoveTo(last, current)
     else if (last.index() != current.index()) last.remove();
     current.prop("contenteditable", true).focus();
 
-    $("#launcher-completion-container").empty();
+    LauncherCompletionClean();
 
     // Selects all text
     var sel, range;
@@ -231,6 +237,7 @@ $(document).ready(function() {
             launcherBusy = true;
             sys.HideAndReset();
             LauncherClean();
+            LauncherCompletionClean();
             return false;
         }
         // To fix the wired focus condition

@@ -45,11 +45,24 @@ body {
 }
 
 #launcher-completion-container {
-    display: inline-block;
+    display: none;
     text-align: left;
     max-height: 160px;
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+#launcher-completion-container.show {
+    display: inline-block;
+}
+
+#launcher-completion-container:before {
+    display: block;
+    padding: 2px;
+    margin:  2px;
+    white-space: pre;
+    content: "Completion:";
+    color: white;
 }
 
 .launcher-completion {
@@ -61,3 +74,5 @@ body {
     border-radius: 3px;
     white-space: pre;
 }
+
+:focus { outline: none; }
