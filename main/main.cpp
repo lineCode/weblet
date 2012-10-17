@@ -259,6 +259,18 @@ js_cb_get_desktop_focus(JSContextRef context,
     return JSValueMakeNull(context);
 }
 
+static JSValueRef
+js_cb_exit(JSContextRef context,
+           JSObjectRef function,
+           JSObjectRef self,
+           size_t argc,
+           const JSValueRef argv[],
+           JSValueRef* exception)
+{
+    gtk_main_quit();   
+    return JSValueMakeNull(context);
+}
+
 static void sendWKEvent(char *line)
 {
     WebKitDOMDocument *dom = webkit_web_view_get_dom_document(web_view);
@@ -363,6 +375,7 @@ main(int argc, char* argv[]) {
     register_native_method("HideAndReset", js_cb_hide_and_reset);
     register_native_method("Show", js_cb_show);
     register_native_method("LoadPlugin", js_cb_load_plugin);
+    register_native_method("Exit", js_cb_exit);
 
     /* Load home page */
     char __empty[] = "";

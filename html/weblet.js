@@ -175,12 +175,14 @@ function LauncherKeyPressedInCurrentArgument(event)
 $(document).ready(function() {
     if (!sys.LoadPlugin("launcher", "weblet-plugin-launcher.so"))
     {
-        sys.Error("Cannot load the launcher plugin");
+        sys.DebugPrint("Cannot load the launcher plugin");
+        sys.Exit();
     }
 
     if (!sys.LoadPlugin("completion", "weblet-plugin-completion.so"))
     {
-        sys.Error("Cannot load the completion plugin");
+        sys.DebugPrint("Cannot load the completion plugin");
+        sys.Exit();
     }
 
     $("body").click(function() {
