@@ -27,9 +27,39 @@ function LauncherDoCompletion()
     var comp = sys.CompleteFileName(launcherCurrentArgument.text());
     if (comp != null)
     {
-        for (var i = 0; i < comp.length; ++ i)
+        var dcomp = "";
+        var s = comp[0];
+        var e = comp[comp.length - 1];
+        var i = 0;
+        while (i < s.length && i < e.length && s.charAt(i) == e.charAt(i))
+        {
+            dcomp += s.charAt(i);
+            ++ i;
+        }
+
+        for (i = 0; i < comp.length; ++ i)
         {
             container.append("<div class='launcher-completion'>" + comp[i] + "</div>");
+        }
+
+        launcherCurrentArgument.text(dcomp);
+        // Move the cursor to the end
+        var dom = launcherCurrentArgument.get(0);
+        if (document.createRange)
+        {
+            range = document.createRange();
+            range.selectNodeContents(dom);
+            range.collapse(false);
+            selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+        else if (document.selection)
+        { 
+            range = document.body.createTextRange();
+            range.moveToElementText(dom);
+            range.collapse(false);
+            range.select();
         }
     }
 }
