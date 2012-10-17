@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
+#include <algorithm>
 #include <vector>
 
 using namespace std;
@@ -22,6 +23,12 @@ static int
 cmpstringp(const void *p1, const void *p2)
 {
     return strcmp(* (char * const *) p1, * (char * const *) p2);
+}
+
+static bool
+cmpString(const char *a, const char *b)
+{
+    return strcmp(a, b) < 0;
 }
 
 static size_t
@@ -225,9 +232,11 @@ js_cb_complete_prog(JSContextRef context,
 
         free(paths);
         free(path);
-        
+
         if (comp_all.size() == 0)
             return JSValueMakeNull(context);
+
+        sort(comp_all.begin(), comp_all.end(), cmpString);
         
         JSValueRef *arr = (JSValueRef *)malloc(sizeof(JSValueRef) * comp_all.size());
         

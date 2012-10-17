@@ -103,6 +103,8 @@ function LauncherMoveTo(last, current)
     else if (last.index() != current.index()) last.remove();
     current.prop("contenteditable", true).focus();
 
+    $("#launcher-completion-container").empty();
+
     // Selects all text
     var sel, range;
     if (window.getSelection && document.createRange) {
