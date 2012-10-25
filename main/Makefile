@@ -15,4 +15,4 @@ all: ${T_OBJ}/weblet-local/${PRJ}
 ${T_OBJ}/weblet-local/${PRJ}: ${OBJFILES}
 	@echo LD $@
 	@mkdir -p $(shell dirname $@)
-	${V}${CXX} ${OBJFILES} $(shell pkg-config --libs webkitgtk-3.0) -o $@
+	${V}${CXX} ${OBJFILES} $(shell pkg-config --libs webkitgtk-3.0) -ldl -o $@
