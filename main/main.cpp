@@ -314,6 +314,8 @@ main(int argc, char* argv[]) {
 
     if(!g_thread_supported())
         g_thread_init(NULL);
+
+    signal(SIGCHLD, SIG_IGN);
     
     // Set stdin closed on spawn    
     fcntl(0, F_SETFD, FD_CLOEXEC);
