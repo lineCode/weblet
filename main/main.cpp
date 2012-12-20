@@ -319,6 +319,7 @@ main(int argc, char* argv[]) {
     
     // Set stdin closed on spawn    
     // fcntl(0, F_SETFD, FD_CLOEXEC);
+    freopen("/dev/null", "w", stdout);
     input_channel = g_io_channel_unix_new(0);
 
     // Create a Window, set visual to RGBA
