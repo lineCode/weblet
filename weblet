@@ -1,14 +1,21 @@
 #!/bin/bash
 
-weblet_pid=`pgrep -x weblet-main`
 local_path=`cd $(dirname $0); pwd`
+export WEBLET_HOME=${local_path}/weblet-local/html/weblet.html
+export LD_LIBRARY_PATH=${local_path}/weblet-local/
 
-if [ -z "${weblet_pid}" ]; then
-    echo "Start a new instance of weblet-main"
-    WEBLET_HOME=${local_path}/weblet-local/html/weblet.html LD_LIBRARY_PATH=${local_path}/weblet-local/ \
+if [ $# -eq 0 ]; then
+    weblet_pid=`pgrep -x weblet-main`
+    
+    if [ -z "${weblet_pid}" ]; then
+        echo "Start a new instance of weblet-main"
         socat UNIX-RECV:/tmp/weblet-socket EXEC:${local_path}/weblet-local/weblet-main &
+    fi
+    
+    # XXX: do polling for the socket to be ready
+    while [ ! -S /tmp/weblet-socket ]; do sleep .5; done
+    echo | socat STDIN UNIX-SENDTO:/tmp/weblet-socket
+else 
+    ${local_path}/weblet-local/weblet-main
 fi
 
-# XXX: do polling for the socket to be ready
-while [ ! -S /tmp/weblet-socket ]; do sleep .5; done
-echo | socat STDIN UNIX-SENDTO:/tmp/weblet-socket
