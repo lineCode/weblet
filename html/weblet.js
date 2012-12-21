@@ -276,9 +276,9 @@ $(document).ready(function() {
         {
             // ESC
             launcherBusy = true;
-            sys.HideAndReset();
             LauncherClean();
             LauncherCompletionClean();
+            sys.HideAndReset();
             return false;
         }
         // To fix the wired focus condition
