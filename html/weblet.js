@@ -1,4 +1,5 @@
 var launcherCurrentArgument;
+var launcherHead;
 var launcherCurrentArgumentRangeStart;
 var launcherBusy = false;
 
@@ -26,8 +27,25 @@ function LauncherDoCompletion()
     container.empty();
     var comp;
     if (launcherCurrentArgument.index() == 0)
-        comp = sys.CompleteProg(launcherCurrentArgument.text());
-    else comp = sys.CompleteFileName(launcherCurrentArgument.text());
+    {
+        if (launcherCurrentArgument.text() != "#")
+            comp = sys.CompleteProg(launcherCurrentArgument.text());
+        else comp = null;
+    }
+    else 
+    {
+        var op = $($("#launcher-container").children(".launcher-argument")[0]).text();
+        switch (op)
+        {
+        case "?":
+            comp = null;
+            break;
+        default:
+            comp = sys.CompleteFileName(launcherCurrentArgument.text());
+            break;
+        }
+    }
+
     if (comp != null)
     {
         var dcomp = "";
@@ -96,10 +114,21 @@ function LauncherFinish()
             result.push($(children[i]).text());
     }
 
-    sys.LauncherSubmit(result.length, result);
-    sys.HideAndReset();
     LauncherClean();
     LauncherCompletionClean();
+    sys.HideAndReset();
+
+    if (result.length == 2 && result[0] == "#")
+    {
+        try
+        { alert(eval(result[1])); }
+        catch (e) { alert(e); }
+    }
+    else
+    {
+        sys.LauncherSubmit(result.length, result);
+    }
+
 }
 
 function LauncherMoveTo(last, current)
@@ -199,10 +228,12 @@ function LauncherKeyPressedInCurrentArgument(event)
     } else if (event.which == 9) {
         // tab
         bypass = false;
-        LauncherDoCompletion();
+        if (ArgumentIsCompleted(launcherCurrentArgument.text(), 0))
+            LauncherDoCompletion();
     } else if (event.which == 32) {
         // space
-        if (ArgumentIsCompleted(launcherCurrentArgument.text(), launcherCurrentArgumentRangeStart))
+        if (ArgumentIsCompleted(launcherCurrentArgument.text(), launcherCurrentArgumentRangeStart) &&
+            (launcherCurrentArgument.index() == launcherHead.index() || launcherHead.text() != "#"))
         {
             bypass = false;
             LauncherMoveForward(0);
@@ -245,6 +276,7 @@ $(document).ready(function() {
         launcherCurrentArgument = $(f).closest(".launcher-argument[contenteditable=true]");
         if (launcherCurrentArgument.size() != 0)
         {
+            launcherHead = $($(launcherCurrentArgument).parent().children()[0]);
             launcherCurrentArgumentRangeStart = window.getSelection().anchorOffset;
             return LauncherKeyPressedInCurrentArgument(event);
         }
