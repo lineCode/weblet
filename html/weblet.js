@@ -32,6 +32,16 @@ function LauncherDoCompletion()
             comp = sys.CompleteProg(launcherCurrentArgument.text());
         else comp = null;
     }
+    else if (launcherCurrentArgument.index() == 1 && launcherHead.text() == "#")
+    {
+        var result;
+        var error = false;
+        try
+        { result = String(eval(launcherCurrentArgument.text())); }
+        catch (e)
+        { result = String(e); error = true; }
+        container.text(result);
+    }
     else 
     {
         var op = $($("#launcher-container").children(".launcher-argument")[0]).text();
@@ -120,9 +130,9 @@ function LauncherFinish()
 
     if (result.length == 2 && result[0] == "#")
     {
-        try
-        { alert(eval(result[1])); }
-        catch (e) { alert(e); }
+        // try
+        // { alert(eval(result[1])); }
+        // catch (e) { alert(e); }
     }
     else
     {

@@ -5,6 +5,7 @@ body {
     font-family: consolas, monospace;
     text-align: left;
     background: black;
+    color: white;
 }
 
 #launcher-container {
@@ -13,9 +14,6 @@ body {
     padding: 4px;
     padding-right: 0px;
     white-space: nowrap;
-
-    background: black;
-    color: white;
 }
 
 .launcher-argument { 
