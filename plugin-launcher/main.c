@@ -47,14 +47,16 @@ js_cb_launcher_submit(JSContextRef context,
     }
     cmd_idx_buf[i] = 0;
 
-    pid_t pid;
-    if (posix_spawnp(&pid, cmd_idx_buf[0], NULL, NULL, cmd_idx_buf, environ) == 0)
-    { }
-    else
+    if (fork() == 0)
     {
-        fprintf(stderr, "posix spawn failed, too bad.\n");
+        /* Redirect I/O streams */
+        freopen("/dev/null", "r", stdin);
+        freopen("/dev/null", "w", stdout);
+        execvp(cmd_idx_buf[0], cmd_idx_buf);
+        fprintf(stderr, "RETURNED");
+        exit(1);
     }
-
+    
     return JSValueMakeNull(context);
 }
 
