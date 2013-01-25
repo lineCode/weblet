@@ -2,6 +2,13 @@ var launcherCurrentArgument;
 var launcherHead;
 var launcherCurrentArgumentRangeStart;
 var launcherBusy = false;
+var headerSmartType = "Cmd";
+var regexEmail = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+var regexWeb = /^((http|https):\/\/)?[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?/;
+var regexWebExclude = /\-([0-9]+\.)*[0-9]+|\.sh|\.py$/;
+// var regexWeb2 = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
+var headerCache = "";
+var updateHeaderSmartTypeIndicatorV;
 
 function ArgumentIsCompleted(arg, pos)
 {
@@ -21,18 +28,45 @@ function ArgumentIsCompleted(arg, pos)
     return c == "";
 }
 
+function updateHeaderSmartType()
+{
+    launcherHead = $($(launcherCurrentArgument).parent().children()[0]);
+    var header = launcherHead.text();
+
+    if (header == headerCache) return;
+    headerCache = header;
+
+    if (headerCache == "#") headerSmartType = "JSEval";
+    else if (regexEmail.test(headerCache)) headerSmartType = "Email";
+    else if (regexWeb.test(headerCache) &&
+             !regexWebExclude.test(headerCache))
+        headerSmartType = "Web";
+    // else if (regexWeb2.test(headerCache)) headerSmartType = "Web";
+    else headerSmartType = "Cmd";
+}
+
+function updateHeaderSmartTypeIndicator()
+{
+    updateHeaderSmartType();
+    if (headerSmartType == "Cmd") {
+        $("#launcher-container").attr("smart-type", "Cmd")
+    } else if (headerSmartType == "JSEval") {
+        $("#launcher-container").attr("smart-type", "JSEval");
+    } else if (headerSmartType == "Email") {
+        $("#launcher-container").attr("smart-type", "Email");
+    } else if (headerSmartType == "Web") {
+        $("#launcher-container").attr("smart-type", "Web");
+    }
+}
+
 function LauncherDoCompletion()
 {
+    // Assume that completion won't change headerSmartType
+    updateHeaderSmartType();
     var container = $("#launcher-completion-container");
     container.empty();
     var comp;
-    if (launcherCurrentArgument.index() == 0)
-    {
-        if (launcherCurrentArgument.text() != "#")
-            comp = sys.CompleteProg(launcherCurrentArgument.text());
-        else comp = null;
-    }
-    else if (launcherCurrentArgument.index() == 1 && launcherHead.text() == "#")
+    if (launcherCurrentArgument.index() == 1 && headerSmartType == "JSEval")
     {
         var result;
         var error = false;
@@ -40,20 +74,21 @@ function LauncherDoCompletion()
         { result = String(eval(launcherCurrentArgument.text())); }
         catch (e)
         { result = String(e); error = true; }
-        container.text(result);
+        container.text(result).addClass("show");
+        return;
+    }
+
+    if (launcherCurrentArgument.index() == 0)
+    {
+        if (headerSmartType == "Cmd")
+            comp = sys.CompleteProg(launcherCurrentArgument.text());
+        else return
     }
     else 
     {
-        var op = $($("#launcher-container").children(".launcher-argument")[0]).text();
-        switch (op)
-        {
-        case "?":
-            comp = null;
-            break;
-        default:
+        if (headerSmartType == "Cmd")
             comp = sys.CompleteFileName(launcherCurrentArgument.text());
-            break;
-        }
+        else return
     }
 
     if (comp != null)
@@ -100,8 +135,11 @@ function LauncherDoCompletion()
 function LauncherClean()
 {
     var container = $("#launcher-container");
+    container.attr("smart-type", "Cmd");
     container.empty();
     container.append("<div class='launcher-argument' contenteditable='true'></div>");
+    clearInterval(updateHeaderSmartTypeIndicatorV);
+    headerSmartType = "Cmd";
 }
 
 function LauncherCompletionClean()
@@ -124,21 +162,25 @@ function LauncherFinish()
             result.push($(children[i]).text());
     }
 
+    updateHeaderSmartType();
+    var submitType = headerSmartType;
+
     LauncherClean();
     LauncherCompletionClean();
     sys.HideAndReset();
 
-    if (result.length == 2 && result[0] == "#")
-    {
-        // try
-        // { alert(eval(result[1])); }
-        // catch (e) { alert(e); }
-    }
-    else
+    if (submitType == "Cmd")
     {
         sys.LauncherSubmit(result.length, result);
     }
-
+    else if (submitType == "Web")
+    {
+        result.unshift("x-www-browser");
+        sys.LauncherSubmit(result.length, result);
+    }
+    else if (submitType == "Email")
+    {
+    }
 }
 
 function LauncherMoveTo(last, current)
@@ -250,7 +292,7 @@ function LauncherKeyPressedInCurrentArgument(event)
         }
         else bypass = true;
     }
-
+    
     return bypass;
 }
 
@@ -298,6 +340,7 @@ $(document).ready(function() {
         sys.DebugPrint("sysWakeup");
         sys.Show();
         sys.GetDesktopFocus();
+        updateHeaderSmartTypeIndicatorV = setInterval(updateHeaderSmartTypeIndicator, 200);
         $(".launcher-argument[contenteditable=true]").focus();
         launcherBusy = false;
         return false;

@@ -24,13 +24,37 @@ body {
     border-bottom: 2px solid #acf;
 }
 
-#launcher-container:before {
+#launcher-container[smart-type="Cmd"]:before {
     display: inline-block; 
     padding: 2px;
     margin-right: 4px;
     white-space: pre;
     content: "CMD:"
- }
+}
+
+#launcher-container[smart-type="JSEval"]:before {
+    display: inline-block; 
+    padding: 2px;
+    margin-right: 4px;
+    white-space: pre;
+    content: "Eval:"
+}
+
+#launcher-container[smart-type="Web"]:before {
+    display: inline-block; 
+    padding: 2px;
+    margin-right: 4px;
+    white-space: pre;
+    content: "Web:"
+}
+
+#launcher-container[smart-type="Email"]:before {
+    display: inline-block; 
+    padding: 2px;
+    margin-right: 4px;
+    white-space: pre;
+    content: "Email:"
+}
 
 .launcher-argument[contenteditable=true]
 {

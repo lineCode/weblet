@@ -263,7 +263,6 @@ js_cb_complete_prog(JSContextRef context,
 }
 
 extern "C" {
-    
     weblet_plugin_interface_t
     init(weblet_host_interface_t host_interface)
     {
