@@ -84,6 +84,12 @@ function LauncherDoCompletion()
             comp = sys.CompleteProg(launcherCurrentArgument.text());
         else return
     }
+    else if (headerSmartType == "Cmd" &&
+                 launcherHead.text() == "!" &&
+                 launcherCurrentArgument.index() == 1)
+    {
+        comp = sys.CompleteProg(launcherCurrentArgument.text());
+    }
     else 
     {
         if (headerSmartType == "Cmd")
@@ -171,6 +177,8 @@ function LauncherFinish()
 
     if (submitType == "Cmd")
     {
+        if (result[0] == "!")
+            result.shift();
         sys.LauncherSubmit(result.length, result);
     }
     else if (submitType == "Web")
