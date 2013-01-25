@@ -325,6 +325,7 @@ main(int argc, char* argv[]) {
     GdkVisual *visual = gdk_screen_get_rgba_visual(screen);
 
     gtk_window_set_type_hint(GTK_WINDOW(main_window), GDK_WINDOW_TYPE_HINT_DOCK);
+    gtk_window_set_resizable(GTK_WINDOW(main_window), FALSE);
     gtk_widget_set_can_focus(GTK_WIDGET(main_window), TRUE);
     gtk_window_set_decorated(GTK_WINDOW(main_window), FALSE);
     gtk_window_set_position(GTK_WINDOW(main_window), GTK_WIN_POS_CENTER_ALWAYS);
