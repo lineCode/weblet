@@ -77,12 +77,12 @@ body {
 
 #launcher-completion-container.show {
     display: inline-block;
+    padding: 2px;
 }
 
 #launcher-completion-container:before {
     display: block;
-    padding: 2px;
-    margin:  2px;
+    margin-bottom: 2px;
     white-space: pre;
     content: "Completion:";
     color: white;

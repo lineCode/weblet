@@ -233,7 +233,7 @@ js_cb_hide_and_reset(JSContextRef context,
     GtkAllocation alloc;
     alloc.x = alloc.y = 0;
     alloc.height = alloc.width = 0;
-    gtk_widget_size_allocate(GTK_WIDGET(main_window), &alloc);
+    gtk_widget_size_allocate(GTK_WIDGET(web_view), &alloc);
     gtk_widget_hide(GTK_WIDGET(main_window));
     return JSValueMakeNull(context);
 }
