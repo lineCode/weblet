@@ -231,7 +231,7 @@ function MoveNextCompletion(count)
     MoveCompletion(index);
 }
 
-function LauncherFinish()
+function LauncherFinish(withCtrl)
 {
     if (launcherBusy) return;
     launcherBusy = true;
@@ -256,6 +256,11 @@ function LauncherFinish()
     {
         if (result[0] == "!")
             result.shift();
+        if (withCtrl)
+        {
+            result.unshift("-e")
+            result.unshift("x-terminal-emulator")
+        }
         sys.LauncherSubmit(result.length, result);
     }
     else if (submitType == "Web")
@@ -334,17 +339,18 @@ function LauncherKeyPressedInCurrentArgument(event)
     if (event.which == 13) {
         // enter
         (window.getSelection().anchorNode);
+        updateHeaderSmartType();
         if (event.ctrlKey) {
             bypass = false;
-            // TODO behavior
+            if (headerSmartType != "JSEval")
+                LauncherFinish(true);
         } else
-        {
-            updateHeaderSmartType();
+        {            
             if (!event.shiftKey && headerSmartType != "JSEval") {
                 // As you see you can still input \n by shift+enter
                 bypass = false;
                 // Finish input and send
-                LauncherFinish();
+                LauncherFinish(false);
             }
         }
     } else if (event.which == 33) {
