@@ -5,7 +5,7 @@ var launcherBusy = false;
 var headerSmartType = "Cmd";
 var regexEmail = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 var regexWeb = /^((http|https):\/\/)?[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-])?/;
-var regexWebExclude = /\-([0-9]+\.)*[0-9]+|\.sh|\.py$/;
+var regexWebExclude = /[^\/]+(\-?([0-9]+\.)*[0-9]+|\.sh|\.py|\.bin)$/;
 // var regexWeb2 = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
 var headerCache = "";
 var updateIntervalV;
