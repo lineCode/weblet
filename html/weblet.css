@@ -1,5 +1,5 @@
 body {
-    display: inline-block;
+    display: block;
     padding: 0px;
     margin: 0px;
     font-size: 10pt;
@@ -8,6 +8,8 @@ body {
     background: black;
     color: white;
 }
+
+#all { display: inline-block; }
 
 #launcher-container {
     text-align: left;
@@ -64,7 +66,7 @@ body {
 
 .launcher-argument:empty:before
 {
-    color: #999;
+    color: #666;
     content: "EMPTY";
 }
 
@@ -77,17 +79,17 @@ body {
 }
 
 #launcher-completion-container.show {
-    display: inline-block;
+    display: block;
     padding: 2px;
 }
 
-#launcher-completion-container:before {
-    display: block;
-    margin-bottom: 2px;
-    white-space: pre;
-    content: "Completion:";
-    color: white;
-}
+/* #launcher-completion-container:before { */
+/*     display: block; */
+/*     margin-bottom: 2px; */
+/*     white-space: pre; */
+/*     content: "Completion:"; */
+/*     color: white; */
+/* } */
 
 .launcher-completion {
     display: inline-block;
