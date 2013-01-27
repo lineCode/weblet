@@ -209,6 +209,7 @@ gboolean drawing_face_event_cb(GtkWidget *widget,
                                GdkEvent  *event,
                                gpointer   user_data)
 {
+    // Forward UI events to offscreen backend
     switch (event->type)
     {
     case GDK_FOCUS_CHANGE:
@@ -292,6 +293,7 @@ js_cb_resize_window(JSContextRef context,
         int width = (int)widthF;
         int height = (int)heightF;
         gtk_widget_set_size_request(drawing_face, width, height);
+        gtk_widget_set_size_request(GTK_WIDGET(web_view), width, height);
     }
     return JSValueMakeNull(context);
 }
