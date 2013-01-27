@@ -1,1 +1,40 @@
-WebLet
+Version 0.1
+
+Weblet is a minimalistic launcher based on WebKitGtk, Html and C native plugins.
+Feel free to hack it as well as adding new features.
+
+# Compile 
+
+Current it works (at least I used it in my production environment).
+But the code is dirty, the layout is unstable and may still contain some bugs.
+
+To compile and use it, you need my compile framework
+(http://github.com/xinhaoyuan/works).  Put this project directory to
+works/prj/ and link the layout file (desc) to works/desc/weblet.  Then
+do make commands in the works/ directory.
+
+make weblet-debug will make the project and create a debugging
+instance, everytime you press enter key will send the wakeup signal to
+the launcher.
+
+make weblet-install will install weblet command into ~/bin.
+
+
+# Use
+
+Assuming you have done make weblet-install and everything goes
+fine. You can bind any key you want in your window manager to run the
+``weblet'' command, to start or wakeup the WebLet instance. It will
+show a black command console in the middle of current screen. You can
+type command in it. Press enter to launch the command you typed.
+
+# Features list
+
+ - auto-complete filenames in $PATH for the first command argument.
+
+ - recognize web address in the first command argument and will open
+   x-www-browser for it.
+
+ - use ``#'' as the first argument will enter the JavaScript Eval
+   mode. You can type any javascript in the second argument box. Press
+   ``Tab'' to eval it.
