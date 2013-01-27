@@ -1,4 +1,4 @@
-.PHONY: ${PRJ}-install
+.PHONY: ${PRJ}-install ${PRJ}-debug
 
 ${PRJ}-install: ${PRJ}
 	-${V}pkill weblet-main
