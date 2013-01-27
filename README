@@ -1,23 +1,25 @@
 Version 0.1
 
-Weblet is a minimalistic launcher based on WebKitGtk, Html and C native plugins.
-Feel free to hack it as well as adding new features.
+Weblet is a minimalistic launcher based on WebKitGtk, Html and C
+native plugins.  Feel free to hack it as well as adding new features.
 
 # Compile 
 
 Current it works (at least I used it in my production environment).
-But the code is dirty, the layout is unstable and may still contain some bugs.
+But the code is dirty, the layout is unstable and may still contain
+some bugs.
 
 To compile and use it, you need my compile framework
 (http://github.com/xinhaoyuan/works).  Put this project directory to
 works/prj/ and link the layout file (desc) to works/desc/weblet.  Then
 do make commands in the works/ directory.
 
-make weblet-debug will make the project and create a debugging
+``make weblet-debug'' will make the project and create a debugging
 instance, everytime you press enter key will send the wakeup signal to
 the launcher.
 
-make weblet-install will install weblet command into ~/bin.
+``make weblet-install'' will install the ``weblet'' command into
+~/bin.
 
 
 # Use
