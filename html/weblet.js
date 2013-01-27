@@ -131,8 +131,8 @@ function LauncherDoCompletion()
         else return
     }
     else if (headerSmartType == "Cmd" &&
-                 launcherHead.text() == "!" &&
-                 launcherCurrentArgument.index() == 1)
+             launcherHead.text() == "!" &&
+             launcherCurrentArgument.index() == 1)
     {
         comp = sys.CompleteProg(launcherCurrentArgument.text());
     }
@@ -182,58 +182,53 @@ function LauncherCompletionClean()
     compContainer.empty().removeClass("show");
 }
 
+function MoveCompletion(index)
+{
+    var containerDOM = document.getElementById('launcher-completion-container');
+    if (index < 0 || index >= containerDOM.childNodes.length) return;
+    if (currentCompletionIndex != null)
+        $(containerDOM.childNodes[currentCompletionIndex]).removeClass("selected");
+    currentCompletionIndex = index;
+    var now = $(containerDOM.childNodes[currentCompletionIndex]).addClass("selected");
+    var top = now.get(0).offsetTop - containerDOM.offsetTop - (containerDOM.clientHeight - now.get(0).offsetHeight) / 2;
+    $(containerDOM).scrollTop(top);
+    SetCurrentArgumentText(now.text());
+}
+
 function MovePrevCompletion(count)
 {
     var containerDOM = document.getElementById('launcher-completion-container');
-    var old, now;
+    var index;
     if (currentCompletionIndex == null)
     {
-        currentCompletionIndex = containerDOM.childNodes.length - 1;
-        old = null;
-        now = $(containerDOM.childNodes[currentCompletionIndex]);
+        index = containerDOM.childNodes.length - 1;
     }
     else
     {
-        old = $(containerDOM.childNodes[currentCompletionIndex]);
-        var newIndex = currentCompletionIndex - count;
-        if (newIndex < 0) 
-            newIndex = currentCompletionIndex == 0 ? 
+        index = currentCompletionIndex - count;
+        if (index < 0) 
+            index = currentCompletionIndex == 0 ? 
             containerDOM.childNodes.length - 1 : 0;
-        currentCompletionIndex = newIndex;
-        now = $(containerDOM.childNodes[currentCompletionIndex]);
     }
-    if (old) old.removeClass("selected");
-    now.addClass("selected");
-    var top = now.get(0).offsetTop - containerDOM.offsetTop;
-    $(containerDOM).scrollTop(top);
-    SetCurrentArgumentText(now.text());
+    MoveCompletion(index);
 }
 
 function MoveNextCompletion(count)
 {
     var containerDOM = document.getElementById('launcher-completion-container');
-    var old, now;
+    var index
     if (currentCompletionIndex == null)
     {
-        currentCompletionIndex = 0;
-        old = null;
-        now = $(containerDOM.childNodes[currentCompletionIndex]);
+        index = 0;
     }
     else
     {
-        old = $(containerDOM.childNodes[currentCompletionIndex]);
-        var newIndex = currentCompletionIndex + count;
-        if (newIndex >= containerDOM.childNodes.length) 
-            newIndex = currentCompletionIndex == containerDOM.childNodes.length - 1 ? 
+        var index = currentCompletionIndex + count;
+        if (index >= containerDOM.childNodes.length) 
+            index = currentCompletionIndex == containerDOM.childNodes.length - 1 ? 
             0 : containerDOM.childNodes.length - 1;
-        currentCompletionIndex = newIndex;
-        now = $(containerDOM.childNodes[currentCompletionIndex]);
     }
-    if (old) old.removeClass("selected");
-    now.addClass("selected");
-    var top = now.get(0).offsetTop - containerDOM.offsetTop;
-    $(containerDOM).scrollTop(top);
-    SetCurrentArgumentText(now.text());
+    MoveCompletion(index);
 }
 
 function LauncherFinish()
