@@ -8,7 +8,16 @@ var regexWeb = /^((http|https):\/\/)?[\w-]+(\.[\w-]+)+([\w.,@?^=%&amp;:\/~+#-]*[
 var regexWebExclude = /\-([0-9]+\.)*[0-9]+|\.sh|\.py$/;
 // var regexWeb2 = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?/gi;
 var headerCache = "";
-var updateHeaderSmartTypeIndicatorV;
+var updateIntervalV;
+var rootContainer;
+
+var oldHeight = null;
+var oldWidth = null;
+
+function HideAndReset()
+{
+    sys.HideAndReset();
+}
 
 function ArgumentIsCompleted(arg, pos)
 {
@@ -45,8 +54,10 @@ function updateHeaderSmartType()
     else headerSmartType = "Cmd";
 }
 
-function updateHeaderSmartTypeIndicator()
+function updateInterval()
 {
+    // smart type indicator
+
     updateHeaderSmartType();
     if (headerSmartType == "Cmd") {
         $("#launcher-container").attr("smart-type", "Cmd")
@@ -56,6 +67,16 @@ function updateHeaderSmartTypeIndicator()
         $("#launcher-container").attr("smart-type", "Email");
     } else if (headerSmartType == "Web") {
         $("#launcher-container").attr("smart-type", "Web");
+    }
+
+    var width = rootContainer.scrollWidth;
+    var height = rootContainer.scrollHeight;
+
+    if (width != oldWidth || height != oldHeight)
+    {
+        oldWidth = width;
+        oldHeight = height;
+        sys.ResizeWindow(width, height);
     }
 }
 
@@ -144,7 +165,7 @@ function LauncherClean()
     container.attr("smart-type", "Cmd");
     container.empty();
     container.append("<div class='launcher-argument' contenteditable='true'></div>");
-    clearInterval(updateHeaderSmartTypeIndicatorV);
+    clearInterval(updateIntervalV);
     headerSmartType = "Cmd";
 }
 
@@ -173,7 +194,7 @@ function LauncherFinish()
 
     LauncherClean();
     LauncherCompletionClean();
-    sys.HideAndReset();
+    HideAndReset();
 
     if (submitType == "Cmd")
     {
@@ -260,11 +281,15 @@ function LauncherKeyPressedInCurrentArgument(event)
         if (event.ctrlKey) {
             bypass = false;
             // TODO behavior
-        } else if (!event.shiftKey) {
-            // As you see you can still input \n by shift+enter
-            bypass = false;
-            // Finish input and send
-            LauncherFinish();
+        } else
+        {
+            updateHeaderSmartType();
+            if (!event.shiftKey && headerSmartType != "JSEval") {
+                // As you see you can still input \n by shift+enter
+                bypass = false;
+                // Finish input and send
+                LauncherFinish();
+            }
         }
     } else if (event.which == 37) {
         // left
@@ -328,7 +353,7 @@ $(document).ready(function() {
             launcherBusy = true;
             LauncherClean();
             LauncherCompletionClean();
-            sys.HideAndReset();
+            HideAndReset();
             return false;
         }
         // To fix the wired focus condition
@@ -348,9 +373,11 @@ $(document).ready(function() {
         sys.DebugPrint("sysWakeup");
         sys.Show();
         sys.GetDesktopFocus();
-        updateHeaderSmartTypeIndicatorV = setInterval(updateHeaderSmartTypeIndicator, 200);
+        updateIntervalV = setInterval(updateInterval, 200);
         $(".launcher-argument[contenteditable=true]").focus();
         launcherBusy = false;
         return false;
     });
+
+    rootContainer = document.getElementById("all");
 });

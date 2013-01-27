@@ -9,7 +9,7 @@ if [ $# -eq 0 ]; then
     
     if [ -z "${weblet_pid}" ]; then
         echo "Start a new instance of weblet-main"
-        socat UNIX-RECV:/tmp/weblet-socket EXEC:${local_path}/weblet-local/weblet-main &
+        socat UNIX-RECV:/tmp/weblet-socket EXEC:${local_path}/weblet-local/weblet-main 2> /tmp/weblet-log &
     fi
     
     # XXX: do polling for the socket to be ready

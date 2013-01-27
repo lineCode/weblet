@@ -5,6 +5,7 @@
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
+#include <cairo.h>
 
 #include <unistd.h>
 #include <signal.h>
@@ -30,6 +31,8 @@ static int register_native_method(const char *method_name, weblet_js_callback_f 
 
 GtkWidget     *main_window = NULL;
 WebKitWebView *web_view = NULL;
+GtkWidget     *offscreen_window = NULL;
+GtkWidget     *drawing_face = NULL;
 
 JSGlobalContextRef jsNativeContext;
 JSObjectRef        jsNativeObject;
@@ -103,6 +106,15 @@ load_plugin(const char *plugin_name, const char *plugin_file_name)
 
 static void destroy_cb(GtkWidget *widget, gpointer data) { main_window = NULL; gtk_main_quit(); }
 
+static gboolean debug_cb(GObject *obj, gpointer data) { fprintf(stderr, "!!!\n"); return FALSE; }
+
+static void main_window_focus_cb(GObject *obj, gpointer data) {
+    if (gtk_window_has_toplevel_focus(GTK_WINDOW(main_window)))
+    {
+        gtk_widget_grab_focus(GTK_WIDGET(web_view));
+    }
+}
+
 static void
 load_status_cb(WebKitWebFrame *frame,
                gboolean arg1,
@@ -153,6 +165,76 @@ navigation_cb(WebKitWebView             *web_view,
     else return FALSE;
 }
 
+gboolean console_message_cb(WebKitWebView *web_view,
+                            gchar         *message,
+                            gint           line,
+                            gchar         *source_id,
+                            gpointer       user_data)
+{
+    fprintf(stderr, "WebKit JS Console[%s:%d]:\n  %s\n", source_id, line, message);
+    return TRUE;
+}
+
+gboolean context_menu_cb(WebKitWebView       *web_view,
+                         GtkWidget           *default_menu,
+                         WebKitHitTestResult *hit_test_result,
+                         gboolean             triggered_with_keyboard,
+                         gpointer             user_data)
+{ return TRUE; }
+
+gboolean offscreen_window_damage_cb(GtkWidget *widget,
+                                    GdkEvent  *event,
+                                    gpointer   user_data)
+{
+    gtk_widget_queue_draw(drawing_face);
+    return TRUE;
+}
+
+gboolean drawing_face_draw_cb(GtkWidget *widget, cairo_t *cr, gpointer data)
+{
+    cairo_surface_t *src = gtk_offscreen_window_get_surface(GTK_OFFSCREEN_WINDOW(offscreen_window));
+    if (src == NULL)
+    {
+        fprintf(stderr, "src surface not exist\n");
+        return FALSE;
+    }
+
+    cairo_set_source_surface(cr, src, 0, 0);
+    cairo_paint(cr);
+
+    return TRUE;
+}
+
+gboolean drawing_face_event_cb(GtkWidget *widget,
+                               GdkEvent  *event,
+                               gpointer   user_data)
+{
+    switch (event->type)
+    {
+    case GDK_FOCUS_CHANGE:
+    case GDK_MOTION_NOTIFY:
+    case GDK_BUTTON_PRESS:
+    case GDK_2BUTTON_PRESS:
+    case GDK_3BUTTON_PRESS:
+    case GDK_BUTTON_RELEASE:
+    case GDK_KEY_PRESS:
+    case GDK_KEY_RELEASE:
+    case GDK_ENTER_NOTIFY:
+    case GDK_LEAVE_NOTIFY:
+    case GDK_SCROLL:
+    {
+        GdkEvent *nevent = gdk_event_copy(event);
+        nevent->any.window = gtk_widget_get_window(GTK_WIDGET(web_view));
+        gdk_event_put(nevent);
+        break;
+    }
+        
+    default:
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static int
 register_native_method(const char *method_name, weblet_js_callback_f func)
 {
@@ -187,6 +269,25 @@ js_cb_debug_print(JSContextRef context,
         fprintf(stderr, "[DEBUG]:%s\n", msg_buf);
         
         JSStringRelease(string);
+    }
+    return JSValueMakeNull(context);
+}
+
+static JSValueRef
+js_cb_resize_window(JSContextRef context,
+                    JSObjectRef function,
+                    JSObjectRef self,
+                    size_t argc,
+                    const JSValueRef argv[],
+                    JSValueRef* exception)
+{
+    if (argc == 2 && JSValueIsNumber(context, argv[0]) && JSValueIsNumber(context, argv[1]))
+    {
+        double widthF = JSValueToNumber(context, argv[0], NULL);
+        double heightF = JSValueToNumber(context, argv[1], NULL);
+        int width = (int)widthF;
+        int height = (int)heightF;
+        gtk_widget_set_size_request(drawing_face, width, height);
     }
     return JSValueMakeNull(context);
 }
@@ -229,11 +330,17 @@ js_cb_hide_and_reset(JSContextRef context,
            const JSValueRef argv[],
            JSValueRef* exception)
 {
+#if 0 // Disabled because we are using an other workaround
     // Reset to minimize the size of window
     GtkAllocation alloc;
     alloc.x = alloc.y = 0;
-    alloc.height = alloc.width = 0;
+    alloc.height = alloc.width = 1;
     gtk_widget_size_allocate(GTK_WIDGET(web_view), &alloc);
+    // GtkAdjustment *hadj = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(container));
+    // GtkAdjustment *vadj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(container));
+    // printf("!!! %lf %lf %lf %lf\n", gtk_adjustment_get_lower(vadj), gtk_adjustment_get_upper(vadj), gtk_adjustment_get_lower(hadj), gtk_adjustment_get_upper(hadj));
+    // printf("!!! %d %d\n", gtk_scrolled_window_get_min_content_width(GTK_SCROLLED_WINDOW(container)), gtk_scrolled_window_get_min_content_height(GTK_SCROLLED_WINDOW(container)));
+#endif
     gtk_widget_hide(GTK_WIDGET(main_window));
     return JSValueMakeNull(context);
 }
@@ -345,7 +452,20 @@ main(int argc, char* argv[]) {
     /* Create a WebView, set it transparent, add it to the window */
     web_view = WEBKIT_WEB_VIEW(webkit_web_view_new());
     webkit_web_view_set_transparent(web_view, TRUE);
-    gtk_container_add(GTK_CONTAINER(main_window), GTK_WIDGET(web_view));
+    WebKitWebSettings *wvsetting = webkit_web_view_get_settings(web_view);
+    g_object_set (G_OBJECT(wvsetting), "enable-default-context-menu", FALSE, NULL);
+
+    offscreen_window = gtk_offscreen_window_new();
+    gtk_container_add(GTK_CONTAINER(offscreen_window), GTK_WIDGET(web_view));
+    g_signal_connect(G_OBJECT(offscreen_window), "damage-event", G_CALLBACK(offscreen_window_damage_cb), NULL);
+
+    drawing_face = gtk_drawing_area_new();
+    gtk_container_add(GTK_CONTAINER(main_window), drawing_face);
+    g_signal_connect(G_OBJECT(drawing_face), "draw", G_CALLBACK(drawing_face_draw_cb), NULL);
+    g_signal_connect(G_OBJECT(drawing_face), "event", G_CALLBACK(drawing_face_event_cb), NULL);
+    gtk_widget_add_events(drawing_face, GDK_ALL_EVENTS_MASK);
+    gtk_widget_set_can_focus(drawing_face, TRUE);
+    gtk_widget_set_can_focus(offscreen_window, TRUE);
 
     /* Create the native object with local callback properties */    
     JSGlobalContextRef js_global_context =
@@ -370,11 +490,15 @@ main(int argc, char* argv[]) {
                      G_CALLBACK(load_status_cb), &jsNativeObject);
     g_signal_connect(web_view, "navigation-policy-decision-requested",
                      G_CALLBACK(navigation_cb), NULL);
+    g_signal_connect(web_view, "console-message", G_CALLBACK(console_message_cb), NULL);
+    g_signal_connect(web_view, "context-menu", G_CALLBACK(context_menu_cb), NULL);
+    g_signal_connect(main_window, "notify::is-active", G_CALLBACK(main_window_focus_cb), NULL);
     
     /* Show it and continue running until the window closes */
     gtk_widget_grab_focus(GTK_WIDGET(web_view));
 
     register_native_method("DebugPrint", js_cb_debug_print);
+    register_native_method("ResizeWindow", js_cb_resize_window);
     register_native_method("GetDesktopFocus", js_cb_get_desktop_focus);
     register_native_method("HideAndReset", js_cb_hide_and_reset);
     register_native_method("Show", js_cb_show);
@@ -396,6 +520,8 @@ main(int argc, char* argv[]) {
     g_free(start);
 
     gtk_widget_show(GTK_WIDGET(web_view));
+    gtk_widget_show(GTK_WIDGET(drawing_face));
+    gtk_widget_show(GTK_WIDGET(offscreen_window));
     gtk_main();
     
     return 0;
