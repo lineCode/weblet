@@ -143,7 +143,7 @@ function LauncherDoCompletion()
         else return
     }
 
-    if (comp != null)
+    if (comp != null && comp.length > 0)
     {
         var dcomp = "";
         var s = comp[0];
@@ -161,9 +161,8 @@ function LauncherDoCompletion()
         }
 
         SetCurrentArgumentText(dcomp);
+        container.addClass("show");
     }
-
-    container.addClass("show");
 }
 
 function LauncherClean()
