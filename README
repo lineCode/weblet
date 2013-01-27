@@ -6,6 +6,7 @@ native plugins.  Feel free to hack it as well as adding new features.
 BTW: Currently the script wrapper uses socat for sending WakeUp signal
 remotely, so socat is required too.
 
+
 # Compile 
 
 Current it works (at least I used it in my production environment).
@@ -32,6 +33,7 @@ fine. You can bind any key you want in your window manager to run the
 ``weblet'' command, to start or wakeup the WebLet instance. It will
 show a black command console in the middle of current screen. You can
 type command in it. Press enter to launch the command you typed.
+
 
 # Features list
 
