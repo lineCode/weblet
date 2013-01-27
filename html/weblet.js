@@ -108,10 +108,9 @@ function LauncherDoCompletion()
 {
     // Assume that completion won't change headerSmartType
     updateHeaderSmartType();
-    var container = $("#launcher-completion-container");
-    container.empty();
-    currentCompletionIndex = null;
+    LauncherCompletionClean();
 
+    var container = $("#launcher-completion-container");
     var comp;
     if (launcherCurrentArgument.index() == 1 && headerSmartType == "JSEval")
     {
