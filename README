@@ -3,6 +3,9 @@ Version 0.1
 Weblet is a minimalistic launcher based on WebKitGtk, Html and C
 native plugins.  Feel free to hack it as well as adding new features.
 
+BTW: Currently the script wrapper uses socat for sending WakeUp signal
+remotely, so socat is required too.
+
 # Compile 
 
 Current it works (at least I used it in my production environment).
