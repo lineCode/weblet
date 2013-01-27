@@ -16,6 +16,7 @@ var oldWidth = null;
 
 function HideAndReset()
 {
+    updateInterval();
     sys.HideAndReset();
 }
 

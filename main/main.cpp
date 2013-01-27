@@ -222,6 +222,10 @@ gboolean drawing_face_event_cb(GtkWidget *widget,
     case GDK_ENTER_NOTIFY:
     case GDK_LEAVE_NOTIFY:
     case GDK_SCROLL:
+    case GDK_TOUCH_BEGIN:
+    case GDK_TOUCH_UPDATE:
+    case GDK_TOUCH_END:
+    case GDK_TOUCH_CANCEL:
     {
         GdkEvent *nevent = gdk_event_copy(event);
         nevent->any.window = gtk_widget_get_window(GTK_WIDGET(web_view));
@@ -463,7 +467,24 @@ main(int argc, char* argv[]) {
     gtk_container_add(GTK_CONTAINER(main_window), drawing_face);
     g_signal_connect(G_OBJECT(drawing_face), "draw", G_CALLBACK(drawing_face_draw_cb), NULL);
     g_signal_connect(G_OBJECT(drawing_face), "event", G_CALLBACK(drawing_face_event_cb), NULL);
-    gtk_widget_add_events(drawing_face, GDK_ALL_EVENTS_MASK);
+    gtk_widget_add_events(drawing_face,
+                          GDK_POINTER_MOTION_MASK |
+                          GDK_POINTER_MOTION_HINT_MASK |
+                          GDK_BUTTON_MOTION_MASK | 
+                          GDK_BUTTON1_MOTION_MASK |
+                          GDK_BUTTON2_MOTION_MASK |
+                          GDK_BUTTON3_MOTION_MASK |
+                          GDK_BUTTON_PRESS_MASK |
+                          GDK_BUTTON_RELEASE_MASK|
+                          GDK_KEY_PRESS_MASK |
+                          GDK_KEY_RELEASE_MASK |
+                          GDK_ENTER_NOTIFY_MASK |
+                          GDK_LEAVE_NOTIFY_MASK |
+                          GDK_FOCUS_CHANGE_MASK |
+                          GDK_PROXIMITY_IN_MASK |
+                          GDK_PROXIMITY_OUT_MASK |
+                          GDK_SCROLL_MASK |
+                          GDK_TOUCH_MASK);
     gtk_widget_set_can_focus(drawing_face, TRUE);
     gtk_widget_set_can_focus(offscreen_window, TRUE);
 
