@@ -10,7 +10,7 @@ var regexWebExclude = /\-([0-9]+\.)*[0-9]+|\.sh|\.py$/;
 var headerCache = "";
 var updateIntervalV;
 var rootContainer;
-
+var currentCompletionIndex = null;
 var oldHeight = null;
 var oldWidth = null;
 
@@ -18,6 +18,29 @@ function HideAndReset()
 {
     updateInterval();
     sys.HideAndReset();
+}
+
+function SetCurrentArgumentText(txt)
+{
+    launcherCurrentArgument.text(txt);
+    // Move the cursor to the end
+    var dom = launcherCurrentArgument.get(0);
+    if (document.createRange)
+    {
+        range = document.createRange();
+        range.selectNodeContents(dom);
+        range.collapse(false);
+        selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+    else if (document.selection)
+    { 
+        range = document.body.createTextRange();
+        range.moveToElementText(dom);
+        range.collapse(false);
+        range.select();
+    }
 }
 
 function ArgumentIsCompleted(arg, pos)
@@ -87,6 +110,8 @@ function LauncherDoCompletion()
     updateHeaderSmartType();
     var container = $("#launcher-completion-container");
     container.empty();
+    currentCompletionIndex = null;
+
     var comp;
     if (launcherCurrentArgument.index() == 1 && headerSmartType == "JSEval")
     {
@@ -136,25 +161,7 @@ function LauncherDoCompletion()
             container.append("<div class='launcher-completion'>" + comp[i] + "</div>");
         }
 
-        launcherCurrentArgument.text(dcomp);
-        // Move the cursor to the end
-        var dom = launcherCurrentArgument.get(0);
-        if (document.createRange)
-        {
-            range = document.createRange();
-            range.selectNodeContents(dom);
-            range.collapse(false);
-            selection = window.getSelection();
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
-        else if (document.selection)
-        { 
-            range = document.body.createTextRange();
-            range.moveToElementText(dom);
-            range.collapse(false);
-            range.select();
-        }
+        SetCurrentArgumentText(dcomp);
     }
 
     container.addClass("show");
@@ -173,7 +180,62 @@ function LauncherClean()
 function LauncherCompletionClean()
 {
     var compContainer = $("#launcher-completion-container");
+    currentCompletionIndex = null;
     compContainer.empty().removeClass("show");
+}
+
+function MovePrevCompletion(count)
+{
+    var containerDOM = document.getElementById('launcher-completion-container');
+    var old, now;
+    if (currentCompletionIndex == null)
+    {
+        currentCompletionIndex = containerDOM.childNodes.length - 1;
+        old = null;
+        now = $(containerDOM.childNodes[currentCompletionIndex]);
+    }
+    else
+    {
+        old = $(containerDOM.childNodes[currentCompletionIndex]);
+        var newIndex = currentCompletionIndex - count;
+        if (newIndex < 0) 
+            newIndex = currentCompletionIndex == 0 ? 
+            containerDOM.childNodes.length - 1 : 0;
+        currentCompletionIndex = newIndex;
+        now = $(containerDOM.childNodes[currentCompletionIndex]);
+    }
+    if (old) old.removeClass("selected");
+    now.addClass("selected");
+    var top = now.get(0).offsetTop - containerDOM.offsetTop;
+    $(containerDOM).scrollTop(top);
+    SetCurrentArgumentText(now.text());
+}
+
+function MoveNextCompletion(count)
+{
+    var containerDOM = document.getElementById('launcher-completion-container');
+    var old, now;
+    if (currentCompletionIndex == null)
+    {
+        currentCompletionIndex = 0;
+        old = null;
+        now = $(containerDOM.childNodes[currentCompletionIndex]);
+    }
+    else
+    {
+        old = $(containerDOM.childNodes[currentCompletionIndex]);
+        var newIndex = currentCompletionIndex + count;
+        if (newIndex >= containerDOM.childNodes.length) 
+            newIndex = currentCompletionIndex == containerDOM.childNodes.length - 1 ? 
+            0 : containerDOM.childNodes.length - 1;
+        currentCompletionIndex = newIndex;
+        now = $(containerDOM.childNodes[currentCompletionIndex]);
+    }
+    if (old) old.removeClass("selected");
+    now.addClass("selected");
+    var top = now.get(0).offsetTop - containerDOM.offsetTop;
+    $(containerDOM).scrollTop(top);
+    SetCurrentArgumentText(now.text());
 }
 
 function LauncherFinish()
@@ -292,6 +354,14 @@ function LauncherKeyPressedInCurrentArgument(event)
                 LauncherFinish();
             }
         }
+    } else if (event.which == 33) {
+        // page up
+        bypass = false;
+        MovePrevCompletion(8);
+    } else if (event.which == 34) {
+        // page down
+        bypass = false;
+        MoveNextCompletion(8);
     } else if (event.which == 37) {
         // left
         if (event.ctrlKey && event.altKey) {
@@ -304,6 +374,14 @@ function LauncherKeyPressedInCurrentArgument(event)
             bypass = false;
             LauncherMoveForward(1);
         }
+    } else if (event.which == 38) {
+        // up
+        bypass = false;
+        MovePrevCompletion(1);
+    } else if (event.which == 40) {
+        // down
+        bypass = false;
+        MoveNextCompletion(1);
     } else if (event.which == 8) {
         // backspace
         if ($(".launcher-argument[contenteditable=true]").text() == "")
