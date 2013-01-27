@@ -40,6 +40,6 @@ type command in it. Press enter to launch the command you typed.
  - recognize web address in the first command argument and will open
    x-www-browser for it.
 
- - use ``#'' as the first argument will enter the JavaScript Eval
+ - using ``#'' as the first argument will enter the JavaScript Eval
    mode. You can type any javascript in the second argument box. Press
    ``Tab'' to eval it.
