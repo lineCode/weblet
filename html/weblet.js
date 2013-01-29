@@ -10,7 +10,9 @@ var regexWebExclude = /[^\/]+(\-?([0-9]+\.)*[0-9]+|\.sh|\.py|\.bin)$/;
 var headerCache = "";
 var updateIntervalV;
 var rootContainer;
+
 var currentCompletionIndex = null;
+
 var oldHeight = null;
 var oldWidth = null;
 
@@ -186,10 +188,13 @@ function MoveCompletion(index)
 {
     var containerDOM = document.getElementById('launcher-completion-container');
     if (index < 0 || index >= containerDOM.childNodes.length) return;
+    var now = $(containerDOM.childNodes[index]);
+    if (!now.hasClass("launcher-completion")) return;
+
     if (currentCompletionIndex != null)
         $(containerDOM.childNodes[currentCompletionIndex]).removeClass("selected");
     currentCompletionIndex = index;
-    var now = $(containerDOM.childNodes[currentCompletionIndex]).addClass("selected");
+    now.addClass("selected");
     var top = now.get(0).offsetTop - containerDOM.offsetTop - (containerDOM.clientHeight - now.get(0).offsetHeight) / 2;
     $(containerDOM).scrollTop(top);
     SetCurrentArgumentText(now.text());
