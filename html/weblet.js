@@ -380,12 +380,18 @@ function LauncherKeyPressedInCurrentArgument(event)
         }
     } else if (event.which == 38) {
         // up
-        bypass = false;
-        MovePrevCompletion(1);
+        updateHeaderSmartType();
+        if (headerSmartType != "JSEval") {
+            bypass = false;
+            MovePrevCompletion(1);
+        }
     } else if (event.which == 40) {
         // down
-        bypass = false;
-        MoveNextCompletion(1);
+        updateHeaderSmartType();
+        if (headerSmartType != "JSEval") {
+            bypass = false;
+            MoveNextCompletion(1);
+        }
     } else if (event.which == 8) {
         // backspace
         if ($(".launcher-argument[contenteditable=true]").text() == "")
