@@ -5,7 +5,7 @@ body {
     font-size: 10pt;
     font-family: consolas, monospace;
     text-align: left;
-    background: black;
+    background-color: rgba(1,1,1,.7);
     color: white;
 }
 

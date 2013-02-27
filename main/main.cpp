@@ -31,9 +31,7 @@ static int register_native_method(const char *method_name, weblet_js_callback_f 
 
 GtkWidget     *main_window = NULL;
 WebKitWebView *web_view = NULL;
-GtkWidget     *offscreen_window = NULL;
-GtkWidget     *drawing_face = NULL;
-
+GtkWidget     *container = NULL;
 JSGlobalContextRef jsNativeContext;
 JSObjectRef        jsNativeObject;
 GIOChannel        *input_channel;
@@ -182,64 +180,6 @@ gboolean context_menu_cb(WebKitWebView       *web_view,
                          gpointer             user_data)
 { return TRUE; }
 
-gboolean offscreen_window_damage_cb(GtkWidget *widget,
-                                    GdkEvent  *event,
-                                    gpointer   user_data)
-{
-    gtk_widget_queue_draw(drawing_face);
-    return TRUE;
-}
-
-gboolean drawing_face_draw_cb(GtkWidget *widget, cairo_t *cr, gpointer data)
-{
-    cairo_surface_t *src = gtk_offscreen_window_get_surface(GTK_OFFSCREEN_WINDOW(offscreen_window));
-    if (src == NULL)
-    {
-        fprintf(stderr, "src surface not exist\n");
-        return FALSE;
-    }
-
-    cairo_set_source_surface(cr, src, 0, 0);
-    cairo_paint(cr);
-
-    return TRUE;
-}
-
-gboolean drawing_face_event_cb(GtkWidget *widget,
-                               GdkEvent  *event,
-                               gpointer   user_data)
-{
-    // Forward UI events to offscreen backend
-    switch (event->type)
-    {
-    case GDK_FOCUS_CHANGE:
-    case GDK_MOTION_NOTIFY:
-    case GDK_BUTTON_PRESS:
-    case GDK_2BUTTON_PRESS:
-    case GDK_3BUTTON_PRESS:
-    case GDK_BUTTON_RELEASE:
-    case GDK_KEY_PRESS:
-    case GDK_KEY_RELEASE:
-    case GDK_ENTER_NOTIFY:
-    case GDK_LEAVE_NOTIFY:
-    case GDK_SCROLL:
-    case GDK_TOUCH_BEGIN:
-    case GDK_TOUCH_UPDATE:
-    case GDK_TOUCH_END:
-    case GDK_TOUCH_CANCEL:
-    {
-        GdkEvent *nevent = gdk_event_copy(event);
-        nevent->any.window = gtk_widget_get_window(GTK_WIDGET(web_view));
-        gdk_event_put(nevent);
-        break;
-    }
-        
-    default:
-        return FALSE;
-    }
-    return TRUE;
-}
-
 static int
 register_native_method(const char *method_name, weblet_js_callback_f func)
 {
@@ -292,8 +232,8 @@ js_cb_resize_window(JSContextRef context,
         double heightF = JSValueToNumber(context, argv[1], NULL);
         int width = (int)widthF;
         int height = (int)heightF;
-        gtk_widget_set_size_request(drawing_face, width, height);
-        gtk_widget_set_size_request(GTK_WIDGET(web_view), width, height);
+        fprintf(stderr, "SET SIZE %d %d\n", width, height);
+        gtk_widget_set_size_request(GTK_WIDGET(container), width, height);
     }
     return JSValueMakeNull(context);
 }
@@ -336,17 +276,6 @@ js_cb_hide_and_reset(JSContextRef context,
            const JSValueRef argv[],
            JSValueRef* exception)
 {
-#if 0 // Disabled because we are using an other workaround
-    // Reset to minimize the size of window
-    GtkAllocation alloc;
-    alloc.x = alloc.y = 0;
-    alloc.height = alloc.width = 1;
-    gtk_widget_size_allocate(GTK_WIDGET(web_view), &alloc);
-    // GtkAdjustment *hadj = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(container));
-    // GtkAdjustment *vadj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(container));
-    // printf("!!! %lf %lf %lf %lf\n", gtk_adjustment_get_lower(vadj), gtk_adjustment_get_upper(vadj), gtk_adjustment_get_lower(hadj), gtk_adjustment_get_upper(hadj));
-    // printf("!!! %d %d\n", gtk_scrolled_window_get_min_content_width(GTK_SCROLLED_WINDOW(container)), gtk_scrolled_window_get_min_content_height(GTK_SCROLLED_WINDOW(container)));
-#endif
     gtk_widget_hide(GTK_WIDGET(main_window));
     return JSValueMakeNull(context);
 }
@@ -433,7 +362,8 @@ main(int argc, char* argv[]) {
     input_channel = g_io_channel_unix_new(0);
 
     // Create a Window, set visual to RGBA
-    main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    main_window       = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+
     GdkScreen *screen = gtk_widget_get_screen(main_window);
     GdkVisual *visual = gdk_screen_get_rgba_visual(screen);
 
@@ -451,44 +381,20 @@ main(int argc, char* argv[]) {
 
     gtk_widget_set_visual(GTK_WIDGET(main_window), visual);
     /* Set transparent window background */
-    GdkRGBA bg = {1,1,1,0};
+    GdkRGBA bg = {0,0,0,0};
     gtk_widget_override_background_color(GTK_WIDGET(main_window), GTK_STATE_FLAG_NORMAL, &bg);
     g_signal_connect(G_OBJECT(main_window), "destroy", G_CALLBACK(destroy_cb), NULL);
 
     /* Create a WebView, set it transparent, add it to the window */
     web_view = WEBKIT_WEB_VIEW(webkit_web_view_new());
+    container = gtk_layout_new(NULL, NULL);
+    gtk_layout_put(GTK_LAYOUT(container), GTK_WIDGET(web_view), 0, 0);
+    gtk_container_add(GTK_CONTAINER(main_window), GTK_WIDGET(container));
+    GdkWindow *win = gtk_layout_get_bin_window(GTK_LAYOUT(container));
+
     webkit_web_view_set_transparent(web_view, TRUE);
     WebKitWebSettings *wvsetting = webkit_web_view_get_settings(web_view);
     g_object_set (G_OBJECT(wvsetting), "enable-default-context-menu", FALSE, NULL);
-
-    offscreen_window = gtk_offscreen_window_new();
-    gtk_container_add(GTK_CONTAINER(offscreen_window), GTK_WIDGET(web_view));
-    g_signal_connect(G_OBJECT(offscreen_window), "damage-event", G_CALLBACK(offscreen_window_damage_cb), NULL);
-
-    drawing_face = gtk_drawing_area_new();
-    gtk_container_add(GTK_CONTAINER(main_window), drawing_face);
-    g_signal_connect(G_OBJECT(drawing_face), "draw", G_CALLBACK(drawing_face_draw_cb), NULL);
-    g_signal_connect(G_OBJECT(drawing_face), "event", G_CALLBACK(drawing_face_event_cb), NULL);
-    gtk_widget_add_events(drawing_face,
-                          GDK_POINTER_MOTION_MASK |
-                          GDK_POINTER_MOTION_HINT_MASK |
-                          GDK_BUTTON_MOTION_MASK | 
-                          GDK_BUTTON1_MOTION_MASK |
-                          GDK_BUTTON2_MOTION_MASK |
-                          GDK_BUTTON3_MOTION_MASK |
-                          GDK_BUTTON_PRESS_MASK |
-                          GDK_BUTTON_RELEASE_MASK|
-                          GDK_KEY_PRESS_MASK |
-                          GDK_KEY_RELEASE_MASK |
-                          GDK_ENTER_NOTIFY_MASK |
-                          GDK_LEAVE_NOTIFY_MASK |
-                          GDK_FOCUS_CHANGE_MASK |
-                          GDK_PROXIMITY_IN_MASK |
-                          GDK_PROXIMITY_OUT_MASK |
-                          GDK_SCROLL_MASK |
-                          GDK_TOUCH_MASK);
-    gtk_widget_set_can_focus(drawing_face, TRUE);
-    gtk_widget_set_can_focus(offscreen_window, TRUE);
 
     /* Create the native object with local callback properties */    
     JSGlobalContextRef js_global_context =
@@ -543,8 +449,11 @@ main(int argc, char* argv[]) {
     g_free(start);
 
     gtk_widget_show(GTK_WIDGET(web_view));
-    gtk_widget_show(GTK_WIDGET(drawing_face));
-    gtk_widget_show(GTK_WIDGET(offscreen_window));
+    gtk_widget_show(GTK_WIDGET(container));
+    gtk_widget_set_visual(GTK_WIDGET(container), visual);
+    gtk_widget_override_background_color(GTK_WIDGET(container), GTK_STATE_FLAG_NORMAL, &bg);
+    gtk_widget_set_visual(GTK_WIDGET(web_view), visual);
+    gtk_widget_override_background_color(GTK_WIDGET(web_view), GTK_STATE_FLAG_NORMAL, &bg);
     gtk_main();
     
     return 0;
