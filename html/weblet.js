@@ -114,6 +114,8 @@ function LauncherDoCompletion()
 
     var container = $("#launcher-completion-container");
     var comp;
+    var suggest = null;
+    
     if (launcherCurrentArgument.index() == 1 && headerSmartType == "JSEval")
     {
         var result;
@@ -129,41 +131,55 @@ function LauncherDoCompletion()
     if (launcherCurrentArgument.index() == 0)
     {
         if (headerSmartType == "Cmd")
-            comp = sys.CompleteProg(launcherCurrentArgument.text());
-        else return
+            comp = sys.ListProg(launcherCurrentArgument.text());
+        else return;
+
+        if (comp != null && comp.length > 0) {
+            dcomp = comp[0];
+            comp.shift();
+        }
     }
     else if (headerSmartType == "Cmd" &&
              launcherHead.text() == "!" &&
              launcherCurrentArgument.index() == 1)
     {
-        comp = sys.CompleteProg(launcherCurrentArgument.text());
+        comp = sys.ListProg(launcherCurrentArgument.text());
+        if (comp != null && comp.length > 0) {
+            dcomp = comp[0];
+            comp.shift();
+        }
     }
     else 
     {
         if (headerSmartType == "Cmd")
             comp = sys.CompleteFileName(launcherCurrentArgument.text());
-        else return
+        else return;
+
+        if (comp != null && comp.length > 0)
+        {
+            dcomp = "";
+            var s = comp[0];
+            var e = comp[comp.length - 1];
+            var i = 0;
+            while (i < s.length && i < e.length && s.charAt(i) == e.charAt(i))
+            {
+                dcomp += s.charAt(i);
+                ++ i;
+            }
+        }
     }
 
-    if (comp != null && comp.length > 0)
-    {
-        var dcomp = "";
-        var s = comp[0];
-        var e = comp[comp.length - 1];
-        var i = 0;
-        while (i < s.length && i < e.length && s.charAt(i) == e.charAt(i))
-        {
-            dcomp += s.charAt(i);
-            ++ i;
-        }
 
+    if (comp != null && comp.length > 0) {
         for (i = 0; i < comp.length; ++ i)
         {
             container.append("<div class='launcher-completion'>" + comp[i] + "</div>");
         }
-
-        SetCurrentArgumentText(dcomp);
         container.addClass("show");
+    }
+    
+    if (dcomp != null) {
+        SetCurrentArgumentText(dcomp);
     }
 }
 
@@ -428,6 +444,12 @@ $(document).ready(function() {
     if (!sys.LoadPlugin("completion", "weblet-plugin-completion.so"))
     {
         sys.DebugPrint("Cannot load the completion plugin");
+        sys.Exit();
+    }
+
+    if (!sys.LoadPlugin("dirlist", "weblet-plugin-dirlist.so"))
+    {
+        sys.DebugPrint("Cannot load the dirlist plugin");
         sys.Exit();
     }
 

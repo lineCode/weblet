@@ -2,6 +2,7 @@
 
 local_path=`cd $(dirname $0); pwd`
 export WEBLET_HOME=${local_path}/weblet-local/html/weblet.html
+export WEBLET_PATH=${local_path}/weblet-local
 export LD_LIBRARY_PATH=${local_path}/weblet-local/
 
 if [ $# -eq 0 ]; then

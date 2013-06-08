@@ -1,4 +1,5 @@
 weblet-main:prj/weblet/main:
 weblet-plugin-completion:prj/weblet/plugin-completion:
 weblet-plugin-launcher:prj/weblet/plugin-launcher:
-weblet:prj/weblet:weblet-main weblet-plugin-completion weblet-plugin-launcher
+weblet-plugin-dirlist:prj/weblet/plugin-dirlist:
+weblet:prj/weblet:weblet-main weblet-plugin-completion weblet-plugin-launcher weblet-plugin-dirlist
