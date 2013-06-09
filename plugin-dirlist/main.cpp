@@ -43,6 +43,12 @@ read_utf8_string(string &s, FILE *f) {
     return 0;
 }
 
+static void
+write_utf8_string(const string &s, FILE *f) {
+    fwrite(s.c_str(), s.length(), 1, f);
+    fputc(0, f);
+}
+
 
 static int
 dirlist(vector<string> &r, const string &dirname) {
@@ -76,8 +82,13 @@ dirlist(vector<string> &r, const string &dirname) {
         // read the cache
         FILE *f = fopen(cachename.c_str(), "r");
         if (f == NULL) { cached = 0; goto again; }
+        string s;
+        if (read_utf8_string(s, f) || s != CACHE_HEAD) {
+            fclose(f);
+            cached = 0;
+            goto again;
+        }
         while (!feof(f)) {
-            string s;
             if (read_utf8_string(s, f))
             {
                 if (feof(f)) break;
@@ -104,14 +115,9 @@ dirlist(vector<string> &r, const string &dirname) {
         // Using '\0' as the delimeter. We are using UTF-8 so no problem! +_+
         FILE *f = fopen(cachename.c_str(), "w");
         if (f != NULL) {
-            fputs(CACHE_HEAD, f);
-            fputc(0, f);
+            write_utf8_string(CACHE_HEAD, f);
             for (int i = 0; i < r.size(); ++ i)
-            {
-                size_t s = r[i].length();
-                fwrite(r[i].c_str(), s, 1, f);
-                fputc(0, f);
-            }
+                write_utf8_string(r[i], f);
             fclose(f);
         
             // set time stamp
