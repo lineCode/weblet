@@ -1,10 +1,13 @@
 #!/bin/bash
 
+which socat >/dev/null || { echo "socat not found"; exit 1; }
+
 local_path=`cd $(dirname $0); pwd`
 export WEBLET_HOME=${local_path}/weblet-local/html/weblet.html
 export WEBLET_PATH=${local_path}/weblet-local
 export LD_LIBRARY_PATH=${local_path}/weblet-local/
 
+# add any parameters for debug run
 if [ $# -eq 0 ]; then
     weblet_pid=`pgrep -x weblet-main`
     

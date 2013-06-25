@@ -72,6 +72,7 @@ function updateHeaderSmartType()
     headerCache = header;
 
     if (headerCache == "#") headerSmartType = "JSEval";
+    else if (headerCache == "?") headerSmartType = "Dict";
     else if (regexEmail.test(headerCache)) headerSmartType = "Email";
     else if (regexWeb.test(headerCache) &&
              !regexWebExclude.test(headerCache))
@@ -86,17 +87,19 @@ function updateInterval()
 
     updateHeaderSmartType();
     if (headerSmartType == "Cmd") {
-        $("#launcher-container").attr("smart-type", "Cmd")
+        $("#launcher-line-container").attr("smart-type", "Cmd")
     } else if (headerSmartType == "JSEval") {
-        $("#launcher-container").attr("smart-type", "JSEval");
+        $("#launcher-line-container").attr("smart-type", "JSEval");
+    } else if (headerSmartType == "Dict") {
+        $("#launcher-line-container").attr("smart-type", "Dict");
     } else if (headerSmartType == "Email") {
-        $("#launcher-container").attr("smart-type", "Email");
+        $("#launcher-line-container").attr("smart-type", "Email");
     } else if (headerSmartType == "Web") {
-        $("#launcher-container").attr("smart-type", "Web");
+        $("#launcher-line-container").attr("smart-type", "Web");
     }
 
-    var width = rootContainer.scrollWidth;
-    var height = rootContainer.scrollHeight;
+    var width = rootContainer.offsetWidth;
+    var height = rootContainer.offsetHeight;
 
     if (width != oldWidth || height != oldHeight)
     {
@@ -113,8 +116,7 @@ function LauncherDoCompletion()
     LauncherCompletionClean();
 
     var container = $("#launcher-completion-container");
-    var comp;
-    var suggest = null;
+    var comp, dcomp = null;
     
     if (launcherCurrentArgument.index() == 1 && headerSmartType == "JSEval")
     {
@@ -125,6 +127,11 @@ function LauncherDoCompletion()
         catch (e)
         { result = String(e); error = true; }
         container.text(result).addClass("show");
+        return;
+    }
+
+    if (launcherCurrentArgument.index() == 1 && headerSmartType == "Dict") {
+        // TODO
         return;
     }
 
@@ -185,8 +192,8 @@ function LauncherDoCompletion()
 
 function LauncherClean()
 {
-    var container = $("#launcher-container");
-    container.attr("smart-type", "Cmd");
+    $("#launcher-line-container").attr("smart-type", "Cmd");
+    var container = $("#launcher-arguments-container");
     container.empty();
     container.append("<div class='launcher-argument' contenteditable='true'></div>");
     clearInterval(updateIntervalV);
@@ -212,7 +219,7 @@ function MoveCompletion(index)
     currentCompletionIndex = index;
     now.addClass("selected");
     var top = now.get(0).offsetTop - containerDOM.offsetTop - (containerDOM.clientHeight - now.get(0).offsetHeight) / 2;
-    $(containerDOM).scrollTop(top);
+    containerDOM.scrollTop = top;
     SetCurrentArgumentText(now.text());
 }
 
@@ -257,7 +264,7 @@ function LauncherFinish(withCtrl)
     if (launcherBusy) return;
     launcherBusy = true;
 
-    var container = $("#launcher-container");
+    var container = $("#launcher-arguments-container");
     var children = container.children(".launcher-argument");
     var result = [];
     for (var i = 0; i < children.size(); ++ i) {
@@ -292,14 +299,18 @@ function LauncherFinish(withCtrl)
     else if (submitType == "Email")
     {
     }
+    else if (submitType == "Dict") {
+        result[0] = sys.GetEnv("WEBLET_PATH") + "/dict.sh";
+        sys.LauncherSubmit(result.length, result);
+    }
 }
 
 function LauncherMoveTo(last, current)
 {
     if (last.text() != "")
-        last.prop("contenteditable", false);
+        last.attr("contenteditable", false);
     else if (last.index() != current.index()) last.remove();
-    current.prop("contenteditable", true).focus();
+    current.attr("contenteditable", true).focus();
 
     LauncherCompletionClean();
 
@@ -320,7 +331,7 @@ function LauncherMoveTo(last, current)
 
 function LauncherMoveForward(cycle)
 {
-    var container = $("#launcher-container");
+    var container = $("#launcher-arguments-container");
     var current = launcherCurrentArgument;
     var last = current;
     var children = container.children();
@@ -339,7 +350,7 @@ function LauncherMoveForward(cycle)
 
 function LauncherMoveBackward(cycle)
 {
-    var container = $("#launcher-container");
+    var container = $("#launcher-arguments-container");
     var current = launcherCurrentArgument;
     var last = current;
     var children = container.children();
@@ -355,24 +366,28 @@ function LauncherMoveBackward(cycle)
 
 function LauncherKeyPressedInCurrentArgument(event)
 {
+    updateHeaderSmartType();
     var bypass = true;
     // Process special key here
     if (event.which == 13) {
         // enter
         (window.getSelection().anchorNode);
-        updateHeaderSmartType();
         if (event.ctrlKey) {
             bypass = false;
-            if (headerSmartType != "JSEval")
+            if (headerSmartType != "JSEval" && headerSmartType != "Dict")
                 LauncherFinish(true);
-        } else
-        {            
-            if (!event.shiftKey && headerSmartType != "JSEval") {
-                // As you see you can still input \n by shift+enter
-                bypass = false;
+        } else {            
+            bypass = false;
+
+            if (headerSmartType == "JSEval" && launcherCurrentArgument.index() == 1) {
+                bypass = true;
+            } else if (event.shiftKey) {
+                bypass = true;
+            } else { 
                 // Finish input and send
                 LauncherFinish(false);
             }
+            
         }
     } else if (event.which == 33) {
         // page up
@@ -396,15 +411,13 @@ function LauncherKeyPressedInCurrentArgument(event)
         }
     } else if (event.which == 38) {
         // up
-        updateHeaderSmartType();
-        if (headerSmartType != "JSEval") {
+        if (headerSmartType != "JSEval" && headerSmartType != "Dict") {
             bypass = false;
             MovePrevCompletion(1);
         }
     } else if (event.which == 40) {
         // down
-        updateHeaderSmartType();
-        if (headerSmartType != "JSEval") {
+        if (headerSmartType != "JSEval" && headerSmartType != "Dict") {
             bypass = false;
             MoveNextCompletion(1);
         }
@@ -423,7 +436,8 @@ function LauncherKeyPressedInCurrentArgument(event)
     } else if (event.which == 32) {
         // space
         if (ArgumentIsCompleted(launcherCurrentArgument.text(), launcherCurrentArgumentRangeStart) &&
-            (launcherCurrentArgument.index() == launcherHead.index() || launcherHead.text() != "#"))
+            (launcherCurrentArgument.index() == launcherHead.index() || 
+             (headerSmartType != "JSEval" && headerSmartType != "Dict")))
         {
             bypass = false;
             LauncherMoveForward(0);

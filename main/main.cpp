@@ -219,6 +219,34 @@ js_cb_debug_print(JSContextRef context,
 }
 
 static JSValueRef
+js_cb_get_env(JSContextRef context,
+              JSObjectRef function,
+              JSObjectRef self,
+              size_t argc,
+              const JSValueRef argv[],
+              JSValueRef* exception)
+{
+    if (argc == 1 && JSValueIsString(context, argv[0]))
+    {
+        JSStringRef string = JSValueToStringCopy(context, argv[0], NULL);
+        
+        static const int NAME_BUF_SIZE = 4096;
+        char name_buf[NAME_BUF_SIZE];
+        
+        JSStringGetUTF8CString(string, name_buf, NAME_BUF_SIZE);
+        char *env = getenv(name_buf);
+        JSStringRelease(string);
+        
+        JSStringRef str = JSStringCreateWithUTF8CString(env);
+        JSValueRef ret = JSValueMakeString(context, str);
+        JSStringRelease(str);
+
+        return ret;
+    } else return JSValueMakeNull(context);
+}
+
+
+static JSValueRef
 js_cb_resize_window(JSContextRef context,
                     JSObjectRef function,
                     JSObjectRef self,
@@ -353,10 +381,7 @@ input_channel_in(GIOChannel *c, GIOCondition cond, gpointer data)
 int
 main(int argc, char* argv[]) {
     gtk_init(&argc, &argv);
-
-    if(!g_thread_supported())
-        g_thread_init(NULL);
-
+    
     signal(SIGCHLD, SIG_IGN);
     
     input_channel = g_io_channel_unix_new(0);
@@ -427,6 +452,7 @@ main(int argc, char* argv[]) {
     gtk_widget_grab_focus(GTK_WIDGET(web_view));
 
     register_native_method("DebugPrint", js_cb_debug_print);
+    register_native_method("GetEnv", js_cb_get_env);
     register_native_method("ResizeWindow", js_cb_resize_window);
     register_native_method("GetDesktopFocus", js_cb_get_desktop_focus);
     register_native_method("HideAndReset", js_cb_hide_and_reset);

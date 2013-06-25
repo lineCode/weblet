@@ -49,7 +49,6 @@ write_utf8_string(const string &s, FILE *f) {
     fputc(0, f);
 }
 
-
 static int
 dirlist(vector<string> &r, const string &dirname) {
     int cached = 0;

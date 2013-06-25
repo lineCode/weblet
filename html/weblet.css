@@ -5,18 +5,62 @@ body {
     font-size: 10pt;
     font-family: consolas, monospace;
     text-align: left;
-    background-color: rgba(1,1,1,.7);
+    background: transparent;
+}
+
+/* Legacy style */
+
+/* #all { */
+/*     display: block; */
+/* } */
+
+/* #launcher-container { */
+/*     text-align: left; */
+/*     display: inline-block; */
+/*     background: black; */
+/*     color: white; */
+/* } */
+
+/* #launcher-arguments-container {    */
+/*     padding: 4px; */
+/*     white-space: nowrap; */
+/* } */
+
+/* Current style */
+
+#all {
+    display: block;
+    height: 300px;
+    width: 600px;
+    text-align: center;
+    overflow: hidden;
+}
+
+#all:before {
+    height: 100%;
+    width: 0px;
+    vertical-align: middle;
+    display: inline-block;
+    content: "";
+}
+
+#launcher-container {
+    vertical-align: middle;
+    text-align: left;
+    max-width: 100%;
+    display: inline-block;
+    background: black;
     color: white;
 }
 
-#all { display: inline-block; }
-
-#launcher-container {
-    text-align: left;
-    display: block;
-    padding: 4px;
-    padding-right: 0px;
+#launcher-line-container {
     white-space: nowrap;
+    padding: 4px;
+}
+
+#launcher-arguments-container {
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .launcher-argument { 
@@ -27,37 +71,32 @@ body {
     border-bottom: 2px solid #acf;
 }
 
-#launcher-container[smart-type="Cmd"]:before {
-    display: inline-block; 
-    padding: 2px;
-    margin-right: 4px;
-    white-space: pre;
-    content: "Cmd:"
+#launcher-indicator {
+    display: inline-block;
+    vertical-align: middle;
+    padding-right: 4px;
 }
 
-#launcher-container[smart-type="JSEval"]:before {
-    display: inline-block; 
-    padding: 2px;
-    margin-right: 4px;
-    white-space: pre;
-    content: "Eval:"
+#launcher-line-container[smart-type="Cmd"] #launcher-indicator:before {
+    content: "Cmd";
 }
 
-#launcher-container[smart-type="Web"]:before {
-    display: inline-block; 
-    padding: 2px;
-    margin-right: 4px;
-    white-space: pre;
-    content: "Web:"
+#launcher-line-container[smart-type="JSEval"] #launcher-indicator:before {
+    content: "JavaScript";
 }
 
-#launcher-container[smart-type="Email"]:before {
-    display: block; 
-    padding: 2px;
-    margin-right: 4px;
-    white-space: pre;
-    content: "Email:"
+#launcher-line-container[smart-type="Web"] #launcher-indicator:before {
+    content: "Web";
 }
+
+#launcher-line-container[smart-type="Email"] #launcher-indicator:before {
+    content: "E-mail";
+}
+
+#launcher-line-container[smart-type="Dict"] #launcher-indicator:before {
+    content: "Dict";
+}
+
 
 .launcher-argument[contenteditable=true]
 {
@@ -74,8 +113,7 @@ body {
     display: none;
     text-align: left;
     max-height: 160px;
-    overflow-y: hidden;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 #launcher-completion-container.show {
