@@ -1,11 +1,13 @@
-#include "lib.hpp"
+#include <util.hpp>
 #include <sstream>
 
 using namespace std;
 
 int
-copy_from_jsstring(string &result, JSStringRef js_str)
+copy_from_jsstring_object(JSContextRef context, JSValueRef obj, string &result)
 {
+    if (!JSValueIsString(context, obj)) return 1;
+    JSStringRef js_str = JSValueToStringCopy(context, obj, NULL);
     size_t size = JSStringGetMaximumUTF8CStringSize(js_str);
     char *buf = (char *)malloc(size);
     if (buf)
@@ -14,6 +16,13 @@ copy_from_jsstring(string &result, JSStringRef js_str)
     result = string(buf, size - 1);
     free(buf);
     return 0;
+}
+
+JSValueRef jsstring_object_from_string(JSContextRef context, const string &str) {
+    JSStringRef js_str = JSStringCreateWithUTF8CString(str.c_str());
+    JSValueRef obj = JSValueMakeString(context, js_str);
+    JSStringRelease(js_str);
+    return obj;
 }
 
 void

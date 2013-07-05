@@ -15,7 +15,7 @@
 #include <vector>
 #include <algorithm>
 
-#include "lib.hpp"
+#include <util.hpp>
 
 #define CACHE_HEAD "PLUGIN_DIRLIST_CACHE"
 
@@ -150,10 +150,8 @@ js_cb_dir_list(JSContextRef context,
     if (!JSValueIsString(context, argv[0]))
         return JSValueMakeNull(context);
 
-    JSStringRef js_dirname = JSValueToStringCopy(context, argv[0], NULL);
     string dirname;
-    int r =  copy_from_jsstring(dirname, js_dirname);
-    JSStringRelease(js_dirname);
+    int r =  copy_from_jsstring_object(context, argv[0], dirname);
     if (r) return JSValueMakeNull(context);
 
     vector<string> rlist;
@@ -200,11 +198,9 @@ js_cb_list_prog(JSContextRef context,
 {
     if (argc == 1 && JSValueIsString(context, argv[0]))
     {
-        JSStringRef js_name = JSValueToStringCopy(context, argv[0], NULL);
         string name;
         int r;
-        r = copy_from_jsstring(name, js_name);
-        JSStringRelease(js_name);
+        r = copy_from_jsstring_object(context, argv[0], name);
         
         if (r) return JSValueMakeNull(context);
         
@@ -278,11 +274,7 @@ js_cb_list_prog(JSContextRef context,
         
         int i;
         for (i = 0; i < comp_all.size(); ++ i)
-        {
-            JSStringRef str = JSStringCreateWithUTF8CString(comp_all[i].c_str());
-            arr[i] = JSValueMakeString(context, str);
-            JSStringRelease(str);
-        }
+            arr[i] = jsstring_object_from_string(context, comp_all[i]);
 
         JSObjectRef obj = JSObjectMakeArray(context, comp_all.size(), arr, NULL);
 
