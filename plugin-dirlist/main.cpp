@@ -246,6 +246,11 @@ js_cb_list_prog(JSContextRef context,
         sort(comp_prefix.begin(), comp_prefix.end(), cmpString);
         sort(comp_contain.begin(), comp_contain.end(), cmpString);
 
+        vector<string>::iterator it = unique(comp_prefix.begin(), comp_prefix.end());
+        comp_prefix.resize(distance(comp_prefix.begin(), it));
+        it = unique(comp_contain.begin(), comp_contain.end());
+        comp_contain.resize(distance(comp_contain.begin(), it));
+
         // put the suggestion as first element
         if (comp_prefix.size() == 0) {
             if (comp_contain.size() == 1)
