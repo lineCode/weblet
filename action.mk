@@ -7,4 +7,4 @@ ${PRJ}-install: ${PRJ}
 
 ${PRJ}-debug: ${PRJ}
 	-${V}pkill weblet-main
-	${V}${T_OBJ}/weblet debug
+	${V}${T_OBJ}/weblet -D
